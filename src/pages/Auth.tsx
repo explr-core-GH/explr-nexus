@@ -116,9 +116,11 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground py-6">
-        <div className="container flex items-center justify-center">
-          <img src={logo} alt="ExplrNexus" className="h-20 w-auto" />
+      <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
+        <div className="container py-4">
+          <div className="flex items-center justify-center">
+            <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
+          </div>
         </div>
       </header>
 
@@ -132,8 +134,8 @@ const Auth = () => {
               </h2>
               <p className="text-muted-foreground mt-2">
                 {isLogin
-                  ? 'Sign in to access your inventory'
-                  : 'Sign up to start managing your gear'}
+                  ? 'Sign in to access your ExplrNexus inventory'
+                  : 'Sign up to start managing your gear with ExplrNexus'}
               </p>
             </div>
 
@@ -194,7 +196,11 @@ const Auth = () => {
                 )}
               </div>
 
-              <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full gap-2 bg-accent hover:bg-accent/90 text-accent-foreground" 
+                disabled={isLoading}
+              >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
