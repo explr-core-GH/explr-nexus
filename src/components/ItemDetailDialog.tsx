@@ -85,11 +85,24 @@ export function ItemDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Item Image */}
+        {item.imageUrl && (
+          <div className="aspect-video w-full overflow-hidden rounded-lg bg-secondary -mt-2 mb-2">
+            <img 
+              src={item.imageUrl} 
+              alt={item.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
         <DialogHeader>
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-secondary">
-              <Package className="h-5 w-5 text-foreground" />
-            </div>
+            {!item.imageUrl && (
+              <div className="p-2 rounded-lg bg-secondary">
+                <Package className="h-5 w-5 text-foreground" />
+              </div>
+            )}
             <div className="flex-1">
               <DialogTitle className="text-xl">{item.name}</DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">{item.description}</p>

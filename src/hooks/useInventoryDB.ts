@@ -11,6 +11,7 @@ export interface InventoryItem {
   status: 'available' | 'checked-out' | 'maintenance';
   qr_code: string;
   location: string;
+  image_url: string | null;
   checked_out_by: string | null;
   checked_out_at: string | null;
   created_at: string;
@@ -94,7 +95,7 @@ export function useInventoryDB() {
     return code;
   };
 
-  const addItem = async (item: { name: string; description: string; category: string; location: string }) => {
+  const addItem = async (item: { name: string; description: string; category: string; location: string; image_url?: string }) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -106,7 +107,11 @@ export function useInventoryDB() {
 
     try {
       const newItem = {
-        ...item,
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        location: item.location,
+        image_url: item.image_url || null,
         qr_code: generateQRCode(),
         status: 'available',
       };
