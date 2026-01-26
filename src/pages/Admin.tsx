@@ -4,12 +4,12 @@ import {
   Users, 
   Shield, 
   ShieldOff, 
-  Boxes, 
   ArrowLeft,
   Search,
   Loader2,
   Crown
 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -78,13 +78,7 @@ const Admin = () => {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <Boxes className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">ExplrNexus</h1>
-                <p className="text-xs text-primary-foreground/70">Admin Panel</p>
-              </div>
+              <img src={logo} alt="ExplrNexus" className="h-8 w-auto brightness-0 invert" />
             </div>
             <div className="flex items-center gap-2">
               <Button 

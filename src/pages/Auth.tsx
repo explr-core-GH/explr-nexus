@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,14 +117,8 @@ const Auth = () => {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-6">
-        <div className="container flex items-center justify-center gap-3">
-          <div className="p-2 rounded-lg bg-accent/20">
-            <Boxes className="h-6 w-6" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-xl font-bold tracking-tight">ExplrNexus</h1>
-            <p className="text-xs text-primary-foreground/70">Inventory Management</p>
-          </div>
+        <div className="container flex items-center justify-center">
+          <img src={logo} alt="ExplrNexus" className="h-10 w-auto brightness-0 invert" />
         </div>
       </header>
 
