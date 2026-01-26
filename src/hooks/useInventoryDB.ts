@@ -395,6 +395,48 @@ export function useInventoryDB() {
     }
   };
 
+  const bulkAddItems = async (itemsToAdd: { name: string; description: string; category: string; location: string }[]) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can add items',
+        variant: 'destructive',
+      });
+      return [];
+    }
+
+    try {
+      const newItems = itemsToAdd.map(item => ({
+        ...item,
+        qr_code: generateQRCode(),
+        status: 'available',
+      }));
+
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert(newItems)
+        .select();
+
+      if (error) throw error;
+
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'available' | 'checked-out' | 'maintenance'
+      }));
+
+      setItems(prev => [...typedData, ...prev]);
+      return typedData;
+    } catch (error: any) {
+      console.error('Error bulk adding items:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to import items',
+        variant: 'destructive',
+      });
+      return [];
+    }
+  };
+
   const findByQrCode = (qrCode: string): InventoryItem | undefined => {
     return items.find(item => item.qr_code === qrCode);
   };
@@ -413,6 +455,7 @@ export function useInventoryDB() {
     isLoading,
     isAdmin,
     addItem,
+    bulkAddItems,
     updateItem,
     deleteItem,
     checkOut,
