@@ -134,7 +134,7 @@ const Auth = () => {
               </h2>
               <p className="text-muted-foreground mt-2">
                 {isLogin
-                  ? 'Sign in to access your ExplrNexus inventory'
+                  ? 'Sign in to access the ExplrNexus inventory'
                   : 'Sign up to start managing your gear with ExplrNexus'}
               </p>
             </div>
