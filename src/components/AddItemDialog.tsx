@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ImageUpload } from '@/components/ImageUpload';
 import { InventoryItem } from '@/types/inventory';
 
 interface AddItemDialogProps {
@@ -41,6 +42,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +53,14 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       description,
       category,
       location,
+      imageUrl: imageUrl || undefined,
     });
 
     setName('');
     setDescription('');
     setCategory('');
     setLocation('');
+    setImageUrl(null);
     setOpen(false);
   };
 
@@ -76,6 +80,12 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {/* Photo Upload */}
+          <div className="space-y-2">
+            <Label>Photo</Label>
+            <ImageUpload value={imageUrl} onChange={setImageUrl} />
+          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="name">Item Name *</Label>
             <Input

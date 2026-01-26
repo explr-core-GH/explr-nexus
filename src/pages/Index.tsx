@@ -98,8 +98,14 @@ const Index = () => {
 
   const userName = profile?.full_name || 'Unknown User';
 
-  const handleAddItem = async (item: { name: string; description: string; category: string; location: string }) => {
-    await addItem(item);
+  const handleAddItem = async (item: { name: string; description: string; category: string; location: string; imageUrl?: string }) => {
+    await addItem({
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      location: item.location,
+      image_url: item.imageUrl,
+    });
   };
 
   const handleCheckIn = async (itemId: string) => {
@@ -131,6 +137,7 @@ const Index = () => {
     status: item.status,
     qrCode: item.qr_code,
     location: item.location,
+    imageUrl: item.image_url || undefined,
     checkedOutBy: item.checked_out_by || undefined,
     checkedOutAt: item.checked_out_at || undefined,
     createdAt: item.created_at,
