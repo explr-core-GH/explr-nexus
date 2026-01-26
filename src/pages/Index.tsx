@@ -2,12 +2,12 @@ import { useState, useMemo } from 'react';
 import { 
   Package, 
   Search, 
-  Boxes, 
   CheckCircle2, 
   Clock, 
   Wrench,
   ShieldAlert
 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -150,7 +150,7 @@ const Index = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-pulse-soft">
-            <Boxes className="h-12 w-12 text-accent mx-auto" />
+            <img src={logo} alt="ExplrNexus" className="h-12 w-auto mx-auto opacity-70" />
           </div>
           <p className="mt-4 text-muted-foreground">Loading inventory...</p>
         </div>
@@ -165,13 +165,7 @@ const Index = () => {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <Boxes className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">ExplrNexus</h1>
-                <p className="text-xs text-primary-foreground/70">Inventory Management</p>
-              </div>
+              <img src={logo} alt="ExplrNexus" className="h-8 w-auto brightness-0 invert" />
             </div>
             <div className="flex items-center gap-2">
               <ScanButton 
