@@ -2,114 +2,119 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GearWise Design System - Industrial Modern Aesthetic */
+/* GearWise Design System - Dark Modern with Neon Green Accent */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
 
 @layer base {
   :root {
-    /* Core palette - Deep slate with teal accents */
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    /* Light mode - Clean with green accents */
+    --background: 220 15% 97%;
+    --foreground: 220 20% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 220 20% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 220 20% 10%;
 
-    /* Primary - Deep slate blue */
-    --primary: 215 50% 23%;
-    --primary-foreground: 210 20% 98%;
+    /* Primary - Dark blue-grey */
+    --primary: 220 25% 15%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Light slate */
-    --secondary: 210 15% 93%;
-    --secondary-foreground: 215 25% 25%;
+    /* Secondary */
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 20% 20%;
 
-    --muted: 210 15% 95%;
-    --muted-foreground: 215 15% 45%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
 
-    /* Accent - Teal */
-    --accent: 174 60% 40%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - Neon Green */
+    --accent: 142 76% 50%;
+    --accent-foreground: 220 25% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
     /* Status colors */
-    --available: 160 60% 45%;
+    --available: 142 76% 45%;
     --available-foreground: 0 0% 100%;
     --checked-out: 35 90% 50%;
     --checked-out-foreground: 0 0% 100%;
     --maintenance: 0 72% 51%;
     --maintenance-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 174 60% 40%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 142 76% 50%;
 
     --radius: 0.625rem;
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.08), 0 2px 4px -2px hsl(215 25% 15% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1), 0 4px 6px -4px hsl(215 25% 15% / 0.08);
-    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.1), 0 8px 10px -6px hsl(215 25% 15% / 0.08);
+    --shadow-sm: 0 1px 2px 0 hsl(220 20% 10% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 20% 10% / 0.08), 0 2px 4px -2px hsl(220 20% 10% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(220 20% 10% / 0.1), 0 4px 6px -4px hsl(220 20% 10% / 0.08);
+    --shadow-xl: 0 20px 25px -5px hsl(220 20% 10% / 0.1), 0 8px 10px -6px hsl(220 20% 10% / 0.08);
 
-    --sidebar-background: 215 50% 23%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 174 60% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 45% 30%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 215 40% 35%;
-    --sidebar-ring: 174 60% 50%;
+    --sidebar-background: 220 25% 15%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 142 76% 50%;
+    --sidebar-primary-foreground: 220 25% 10%;
+    --sidebar-accent: 220 20% 22%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 20% 25%;
+    --sidebar-ring: 142 76% 50%;
   }
 
   .dark {
-    --background: 215 30% 10%;
-    --foreground: 210 20% 95%;
+    /* Dark mode - Dark blue-grey with neon green */
+    --background: 222 25% 8%;
+    --foreground: 0 0% 95%;
 
-    --card: 215 30% 13%;
-    --card-foreground: 210 20% 95%;
+    --card: 222 22% 12%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 215 30% 13%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 222 22% 12%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 174 60% 50%;
-    --primary-foreground: 215 30% 10%;
+    /* Primary - Neon Green */
+    --primary: 142 76% 50%;
+    --primary-foreground: 222 25% 8%;
 
-    --secondary: 215 25% 20%;
-    --secondary-foreground: 210 20% 90%;
+    /* Secondary - Slightly lighter blue-grey */
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 215 25% 18%;
-    --muted-foreground: 215 15% 60%;
+    --muted: 222 20% 15%;
+    --muted-foreground: 220 10% 55%;
 
-    --accent: 174 60% 45%;
-    --accent-foreground: 215 30% 10%;
+    /* Accent - Neon Green */
+    --accent: 142 76% 50%;
+    --accent-foreground: 222 25% 8%;
 
-    --destructive: 0 62% 45%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --available: 160 55% 50%;
-    --available-foreground: 0 0% 100%;
+    /* Status colors */
+    --available: 142 76% 50%;
+    --available-foreground: 222 25% 8%;
     --checked-out: 35 85% 55%;
     --checked-out-foreground: 0 0% 100%;
-    --maintenance: 0 65% 50%;
+    --maintenance: 0 65% 55%;
     --maintenance-foreground: 0 0% 100%;
 
-    --border: 215 25% 22%;
-    --input: 215 25% 22%;
-    --ring: 174 60% 50%;
+    --border: 222 18% 20%;
+    --input: 222 18% 20%;
+    --ring: 142 76% 50%;
 
-    --sidebar-background: 215 35% 8%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 174 60% 50%;
-    --sidebar-primary-foreground: 215 30% 10%;
-    --sidebar-accent: 215 30% 15%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 215 25% 18%;
-    --sidebar-ring: 174 60% 50%;
+    --sidebar-background: 222 28% 6%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 142 76% 50%;
+    --sidebar-primary-foreground: 222 25% 8%;
+    --sidebar-accent: 222 22% 14%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 222 18% 16%;
+    --sidebar-ring: 142 76% 50%;
   }
 }
 
