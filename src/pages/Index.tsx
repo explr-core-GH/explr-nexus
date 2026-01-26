@@ -7,7 +7,7 @@ import {
   CheckCircle2, 
   Clock, 
   Wrench,
-  Settings2
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,26 +18,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useInventory } from '@/hooks/useInventory';
+import { useInventoryDB, InventoryItem } from '@/hooks/useInventoryDB';
+import { useAuth } from '@/contexts/AuthContext';
 import { StatsCard } from '@/components/StatsCard';
 import { ItemCard } from '@/components/ItemCard';
 import { AddItemDialog } from '@/components/AddItemDialog';
 import { ItemDetailDialog } from '@/components/ItemDetailDialog';
 import { QRScanner } from '@/components/QRScanner';
 import { ScanResultDialog } from '@/components/ScanResultDialog';
-import { InventoryItem } from '@/types/inventory';
+import { UserMenu } from '@/components/UserMenu';
 
 const Index = () => {
   const { 
     items, 
     isLoading, 
+    isAdmin,
     addItem, 
     checkIn, 
     checkOut, 
     deleteItem, 
     findByQrCode, 
     getStats 
-  } = useInventory();
+  } = useInventoryDB();
+  
+  const { profile } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -60,8 +64,8 @@ const Index = () => {
     return items.filter(item => {
       const matchesSearch = 
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.qrCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+        item.qr_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.location.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
@@ -89,25 +93,46 @@ const Index = () => {
     setScanResultOpen(true);
   };
 
-  const handleScanCheckIn = (itemId: string, userName: string) => {
-    const result = checkIn(itemId, userName);
-    if (result) {
-      // Refresh the scanned item to get updated status
-      const updated = items.find(i => i.id === itemId);
-      if (updated) setScannedItem({ ...updated, status: 'available' });
+  const userName = profile?.full_name || 'Unknown User';
+
+  const handleAddItem = async (item: { name: string; description: string; category: string; location: string }) => {
+    await addItem(item);
+  };
+
+  const handleCheckIn = async (itemId: string) => {
+    const result = await checkIn(itemId, userName);
+    if (result && scannedItem) {
+      setScannedItem({ ...scannedItem, status: 'available', checked_out_by: null, checked_out_at: null });
     }
     return result;
   };
 
-  const handleScanCheckOut = (itemId: string, userName: string) => {
-    const result = checkOut(itemId, userName);
-    if (result) {
-      // Refresh the scanned item to get updated status
-      const updated = items.find(i => i.id === itemId);
-      if (updated) setScannedItem({ ...updated, status: 'checked-out', checkedOutBy: userName });
+  const handleCheckOut = async (itemId: string) => {
+    const result = await checkOut(itemId, userName);
+    if (result && scannedItem) {
+      setScannedItem({ ...scannedItem, status: 'checked-out' });
     }
     return result;
   };
+
+  const handleDelete = async (itemId: string) => {
+    await deleteItem(itemId);
+  };
+
+  // Convert DB item to UI format for dialogs
+  const convertToUIItem = (item: InventoryItem) => ({
+    id: item.id,
+    name: item.name,
+    description: item.description || '',
+    category: item.category,
+    status: item.status,
+    qrCode: item.qr_code,
+    location: item.location,
+    checkedOutBy: item.checked_out_by || undefined,
+    checkedOutAt: item.checked_out_at || undefined,
+    createdAt: item.created_at,
+    lastUpdated: item.updated_at,
+  });
 
   if (isLoading) {
     return (
@@ -137,19 +162,30 @@ const Index = () => {
                 <p className="text-xs text-primary-foreground/70">Inventory Management</p>
               </div>
             </div>
-            <Button 
-              onClick={() => setScannerOpen(true)}
-              size="lg"
-              className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
-            >
-              <ScanLine className="h-5 w-5" />
-              Scan QR
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setScannerOpen(true)}
+                size="lg"
+                className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
+              >
+                <ScanLine className="h-5 w-5" />
+                <span className="hidden sm:inline">Scan QR</span>
+              </Button>
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>
 
       <main className="container py-6 space-y-6">
+        {/* Admin Notice */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/30 rounded-lg text-accent text-sm">
+            <ShieldAlert className="h-4 w-4" />
+            <span>You have administrator privileges. You can add, edit, and delete items.</span>
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard 
@@ -211,7 +247,7 @@ const Index = () => {
                 ))}
               </SelectContent>
             </Select>
-            <AddItemDialog onAdd={addItem} />
+            {isAdmin && <AddItemDialog onAdd={handleAddItem} />}
           </div>
         </div>
 
@@ -224,12 +260,14 @@ const Index = () => {
             <h3 className="text-lg font-semibold">No items found</h3>
             <p className="text-muted-foreground mt-1">
               {items.length === 0 
-                ? "Add your first item to get started" 
+                ? isAdmin 
+                  ? "Add your first item to get started"
+                  : "No items in inventory yet. Ask an admin to add items."
                 : "Try adjusting your search or filters"}
             </p>
-            {items.length === 0 && (
+            {items.length === 0 && isAdmin && (
               <div className="mt-4">
-                <AddItemDialog onAdd={addItem} />
+                <AddItemDialog onAdd={handleAddItem} />
               </div>
             )}
           </div>
@@ -237,7 +275,10 @@ const Index = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map((item, index) => (
               <div key={item.id} style={{ animationDelay: `${index * 50}ms` }}>
-                <ItemCard item={item} onClick={() => handleItemClick(item)} />
+                <ItemCard 
+                  item={convertToUIItem(item)} 
+                  onClick={() => handleItemClick(item)} 
+                />
               </div>
             ))}
           </div>
@@ -246,12 +287,13 @@ const Index = () => {
 
       {/* Item Detail Dialog */}
       <ItemDetailDialog
-        item={selectedItem}
+        item={selectedItem ? convertToUIItem(selectedItem) : null}
         open={detailOpen}
         onOpenChange={setDetailOpen}
-        onCheckIn={checkIn}
-        onCheckOut={checkOut}
-        onDelete={deleteItem}
+        onCheckIn={(itemId) => checkIn(itemId, userName)}
+        onCheckOut={(itemId) => checkOut(itemId, userName)}
+        onDelete={handleDelete}
+        isAdmin={isAdmin}
       />
 
       {/* QR Scanner */}
@@ -264,12 +306,12 @@ const Index = () => {
 
       {/* Scan Result Dialog */}
       <ScanResultDialog
-        item={scannedItem}
+        item={scannedItem ? convertToUIItem(scannedItem) : null}
         notFound={scanNotFound}
         open={scanResultOpen}
         onOpenChange={setScanResultOpen}
-        onCheckIn={handleScanCheckIn}
-        onCheckOut={handleScanCheckOut}
+        onCheckIn={handleCheckIn}
+        onCheckOut={handleCheckOut}
       />
     </div>
   );

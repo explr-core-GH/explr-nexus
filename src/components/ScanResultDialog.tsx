@@ -16,8 +16,8 @@ interface ScanResultDialogProps {
   notFound: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCheckIn: (itemId: string, userName: string) => boolean;
-  onCheckOut: (itemId: string, userName: string) => boolean;
+  onCheckIn: (itemId: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string) => Promise<boolean> | boolean;
 }
 
 export function ScanResultDialog({
@@ -31,21 +31,27 @@ export function ScanResultDialog({
   const [userName, setUserName] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!item || !userName.trim()) return;
+    setIsLoading(true);
     
-    let success = false;
-    if (item.status === 'available') {
-      success = onCheckOut(item.id, userName.trim());
-      setLastAction('check-out');
-    } else if (item.status === 'checked-out') {
-      success = onCheckIn(item.id, userName.trim());
-      setLastAction('check-in');
-    }
-    
-    if (success) {
-      setActionComplete(true);
+    try {
+      let success = false;
+      if (item.status === 'available') {
+        success = await onCheckOut(item.id);
+        setLastAction('check-out');
+      } else if (item.status === 'checked-out') {
+        success = await onCheckIn(item.id);
+        setLastAction('check-in');
+      }
+      
+      if (success) {
+        setActionComplete(true);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -148,7 +154,7 @@ export function ScanResultDialog({
                 placeholder="Enter your name"
                 autoFocus
               />
-              <Button onClick={handleAction} disabled={!userName.trim()} className="w-full gap-2">
+              <Button onClick={handleAction} disabled={!userName.trim() || isLoading} className="w-full gap-2">
                 <ArrowLeftRight className="h-4 w-4" />
                 {item.status === 'available' ? 'Check Out' : 'Check In'}
               </Button>

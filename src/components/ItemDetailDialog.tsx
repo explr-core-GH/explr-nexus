@@ -28,9 +28,10 @@ interface ItemDetailDialogProps {
   item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCheckIn: (itemId: string, userName: string) => boolean;
-  onCheckOut: (itemId: string, userName: string) => boolean;
-  onDelete: (itemId: string) => void;
+  onCheckIn: (itemId: string, userName: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, userName: string) => Promise<boolean> | boolean;
+  onDelete: (itemId: string) => Promise<void> | void;
+  isAdmin?: boolean;
 }
 
 export function ItemDetailDialog({
@@ -40,20 +41,28 @@ export function ItemDetailDialog({
   onCheckIn,
   onCheckOut,
   onDelete,
+  isAdmin = false,
 }: ItemDetailDialogProps) {
   const [userName, setUserName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!item) return null;
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!userName.trim()) return;
+    setIsLoading(true);
     
-    if (item.status === 'available') {
-      onCheckOut(item.id, userName.trim());
-    } else if (item.status === 'checked-out') {
-      onCheckIn(item.id, userName.trim());
+    try {
+      if (item.status === 'available') {
+        await onCheckOut(item.id, userName.trim());
+      } else if (item.status === 'checked-out') {
+        await onCheckIn(item.id, userName.trim());
+      }
+      setUserName('');
+      onOpenChange(false);
+    } finally {
+      setIsLoading(false);
     }
-    setUserName('');
   };
 
   const handleDelete = () => {
@@ -142,7 +151,7 @@ export function ItemDetailDialog({
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="Enter name"
                 />
-                <Button onClick={handleAction} disabled={!userName.trim()} className="gap-2">
+                <Button onClick={handleAction} disabled={!userName.trim() || isLoading} className="gap-2">
                   <ArrowLeftRight className="h-4 w-4" />
                   {item.status === 'available' ? 'Check Out' : 'Check In'}
                 </Button>
@@ -150,7 +159,8 @@ export function ItemDetailDialog({
             </div>
           )}
 
-          {/* Delete Action */}
+          {/* Delete Action - Only show for admins */}
+          {isAdmin && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="w-full text-destructive hover:text-destructive gap-2">
@@ -173,6 +183,7 @@ export function ItemDetailDialog({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          )}
         </div>
       </DialogContent>
     </Dialog>
