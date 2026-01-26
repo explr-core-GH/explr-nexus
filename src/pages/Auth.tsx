@@ -121,7 +121,7 @@ const Auth = () => {
             <Boxes className="h-6 w-6" />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold tracking-tight">GearWise</h1>
+            <h1 className="text-xl font-bold tracking-tight">ExplrNexus</h1>
             <p className="text-xs text-primary-foreground/70">Inventory Management</p>
           </div>
         </div>

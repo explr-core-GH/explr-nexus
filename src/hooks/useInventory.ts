@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { InventoryItem, CheckoutLog, ItemStatus } from '@/types/inventory';
 
-const STORAGE_KEY = 'gearwise_inventory';
-const LOGS_KEY = 'gearwise_logs';
+const STORAGE_KEY = 'explrnexus_inventory';
+const LOGS_KEY = 'explrnexus_logs';
 
 export function useInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
