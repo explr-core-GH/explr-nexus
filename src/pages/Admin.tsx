@@ -82,7 +82,7 @@ const Admin = () => {
                 <Boxes className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">GearWise</h1>
+                <h1 className="text-xl font-bold tracking-tight">ExplrNexus</h1>
                 <p className="text-xs text-primary-foreground/70">Admin Panel</p>
               </div>
             </div>
