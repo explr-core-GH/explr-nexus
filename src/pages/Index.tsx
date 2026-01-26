@@ -26,13 +26,15 @@ import { QRScanner } from '@/components/QRScanner';
 import { ScanResultDialog } from '@/components/ScanResultDialog';
 import { UserMenu } from '@/components/UserMenu';
 import { ScanButton, ScanMode } from '@/components/ScanButton';
+import { CSVImportDialog } from '@/components/CSVImportDialog';
 
 const Index = () => {
   const { 
     items, 
     isLoading, 
     isAdmin,
-    addItem, 
+    addItem,
+    bulkAddItems,
     checkIn, 
     checkOut, 
     deleteItem, 
@@ -247,7 +249,12 @@ const Index = () => {
                 ))}
               </SelectContent>
             </Select>
-            {isAdmin && <AddItemDialog onAdd={handleAddItem} />}
+            {isAdmin && (
+              <>
+                <CSVImportDialog onImport={bulkAddItems} />
+                <AddItemDialog onAdd={handleAddItem} />
+              </>
+            )}
           </div>
         </div>
 
