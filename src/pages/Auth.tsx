@@ -118,7 +118,7 @@ const Auth = () => {
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-6">
         <div className="container flex items-center justify-center">
-          <img src={logo} alt="ExplrNexus" className="h-14 w-auto" />
+          <img src={logo} alt="ExplrNexus" className="h-16 w-auto logo-accent" />
         </div>
       </header>
 
