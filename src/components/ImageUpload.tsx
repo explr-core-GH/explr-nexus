@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Camera, X, Loader2 } from 'lucide-react';
+import { Camera, X, Loader2, Upload, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ interface ImageUploadProps {
 export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +44,12 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      // For camera captures, file.name might be generic, use appropriate extension
+      let fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt || fileExt === file.name) {
+        // Fallback based on MIME type
+        fileExt = file.type.split('/')[1] || 'jpg';
+      }
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `items/${fileName}`;
 
@@ -74,6 +80,9 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
     }
   };
 
@@ -83,10 +92,22 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
 
   return (
     <div className="space-y-2">
+      {/* Hidden file input for gallery/files */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={disabled || isUploading}
+      />
+      
+      {/* Hidden file input for camera capture */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileSelect}
         className="hidden"
         disabled={disabled || isUploading}
@@ -105,11 +126,19 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
                 type="button"
                 variant="secondary"
                 size="sm"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
               >
-                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                Change
+                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               </Button>
               <Button
                 type="button"
@@ -118,30 +147,40 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
                 onClick={handleRemove}
               >
                 <X className="h-4 w-4" />
-                Remove
               </Button>
             </div>
           )}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isUploading}
-          className="w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <div className="space-y-2">
           {isUploading ? (
-            <>
+            <div className="w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin" />
               <span className="text-sm">Uploading...</span>
-            </>
+            </div>
           ) : (
-            <>
-              <Camera className="h-8 w-8" />
-              <span className="text-sm">Click to add photo</span>
-            </>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={disabled}
+                className="h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Camera className="h-6 w-6" />
+                <span className="text-xs font-medium">Take Photo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled}
+                className="h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ImagePlus className="h-6 w-6" />
+                <span className="text-xs font-medium">Choose File</span>
+              </button>
+            </div>
           )}
-        </button>
+        </div>
       )}
     </div>
   );
