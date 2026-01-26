@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, XCircle, ArrowLeftRight, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowLeftRight, AlertTriangle, LogIn, LogOut, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,44 +10,54 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { InventoryItem } from '@/types/inventory';
+import { ScanMode } from '@/components/ScanButton';
 
 interface ScanResultDialogProps {
   item: InventoryItem | null;
   notFound: boolean;
   open: boolean;
+  scanMode: ScanMode;
   onOpenChange: (open: boolean) => void;
   onCheckIn: (itemId: string) => Promise<boolean> | boolean;
   onCheckOut: (itemId: string) => Promise<boolean> | boolean;
+  onMaintenance?: (itemId: string) => Promise<boolean> | boolean;
+  isAdmin?: boolean;
 }
 
 export function ScanResultDialog({
   item,
   notFound,
   open,
+  scanMode,
   onOpenChange,
   onCheckIn,
   onCheckOut,
+  onMaintenance,
+  isAdmin = false,
 }: ScanResultDialogProps) {
   const [userName, setUserName] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
-  const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | null>(null);
+  const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleAction = async () => {
-    if (!item || !userName.trim()) return;
+  const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance') => {
+    if (!item) return;
+    if ((action === 'check-in' || action === 'check-out') && !userName.trim()) return;
+    
     setIsLoading(true);
     
     try {
       let success = false;
-      if (item.status === 'available') {
+      if (action === 'check-out') {
         success = await onCheckOut(item.id);
-        setLastAction('check-out');
-      } else if (item.status === 'checked-out') {
+      } else if (action === 'check-in') {
         success = await onCheckIn(item.id);
-        setLastAction('check-in');
+      } else if (action === 'maintenance' && onMaintenance) {
+        success = await onMaintenance(item.id);
       }
       
       if (success) {
+        setLastAction(action);
         setActionComplete(true);
       }
     } finally {
@@ -84,21 +94,33 @@ export function ScanResultDialog({
   }
 
   if (actionComplete && item) {
+    const actionMessages = {
+      'check-out': { title: 'Checked Out!', message: `has been checked out` },
+      'check-in': { title: 'Checked In!', message: `has been checked in` },
+      'maintenance': { title: 'Sent to Maintenance!', message: `has been sent for maintenance` },
+    };
+    
+    const currentAction = lastAction || 'check-out';
+    
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-sm">
           <div className="text-center py-6">
-            <div className="mx-auto w-16 h-16 rounded-full bg-available/10 flex items-center justify-center mb-4 glow-available">
-              <CheckCircle className="h-8 w-8 text-available" />
+            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+              lastAction === 'maintenance' ? 'bg-maintenance/10' : 'bg-available/10 glow-available'
+            }`}>
+              {lastAction === 'maintenance' ? (
+                <Wrench className="h-8 w-8 text-maintenance" />
+              ) : (
+                <CheckCircle className="h-8 w-8 text-available" />
+              )}
             </div>
             <DialogTitle className="text-xl mb-2">
-              {lastAction === 'check-out' ? 'Checked Out!' : 'Checked In!'}
+              {actionMessages[currentAction].title}
             </DialogTitle>
             <p className="text-muted-foreground">
               <span className="font-semibold text-foreground">{item.name}</span>
-              {lastAction === 'check-out' 
-                ? ` has been checked out to ${userName}`
-                : ` has been checked in by ${userName}`}
+              {' '}{actionMessages[currentAction].message}
             </p>
             <Button className="mt-6" onClick={handleClose}>
               Done
@@ -117,11 +139,156 @@ export function ScanResultDialog({
     'maintenance': 'status-maintenance',
   };
 
+  // Determine what actions are available based on scan mode and item status
+  const renderActions = () => {
+    // If item is already in maintenance
+    if (item.status === 'maintenance') {
+      if (isAdmin) {
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-4 bg-maintenance/10 rounded-lg text-maintenance">
+              <AlertTriangle className="h-5 w-5" />
+              <p className="text-sm font-medium">This item is under maintenance</p>
+            </div>
+            <Button 
+              onClick={() => handleAction('check-in')} 
+              disabled={isLoading}
+              variant="outline"
+              className="w-full gap-2"
+            >
+              <LogIn className="h-4 w-4" />
+              Return from Maintenance
+            </Button>
+          </div>
+        );
+      }
+      return (
+        <div className="flex items-center gap-3 p-4 bg-maintenance/10 rounded-lg text-maintenance">
+          <AlertTriangle className="h-5 w-5" />
+          <p className="text-sm font-medium">This item is under maintenance</p>
+        </div>
+      );
+    }
+
+    // Specific scan modes
+    if (scanMode === 'check-in') {
+      if (item.status !== 'checked-out') {
+        return (
+          <div className="flex items-center gap-3 p-4 bg-available/10 rounded-lg text-available">
+            <CheckCircle className="h-5 w-5" />
+            <p className="text-sm font-medium">This item is already available</p>
+          </div>
+        );
+      }
+      return (
+        <Button 
+          onClick={() => handleAction('check-in')} 
+          disabled={isLoading}
+          className="w-full gap-2 bg-available hover:bg-available/90"
+        >
+          <LogIn className="h-4 w-4" />
+          Check In Now
+        </Button>
+      );
+    }
+
+    if (scanMode === 'check-out') {
+      if (item.status !== 'available') {
+        return (
+          <div className="flex items-center gap-3 p-4 bg-checked-out/10 rounded-lg text-checked-out">
+            <AlertTriangle className="h-5 w-5" />
+            <p className="text-sm font-medium">This item is already checked out</p>
+          </div>
+        );
+      }
+      return (
+        <Button 
+          onClick={() => handleAction('check-out')} 
+          disabled={isLoading}
+          className="w-full gap-2 bg-checked-out hover:bg-checked-out/90"
+        >
+          <LogOut className="h-4 w-4" />
+          Check Out Now
+        </Button>
+      );
+    }
+
+    if (scanMode === 'maintenance') {
+      return (
+        <Button 
+          onClick={() => handleAction('maintenance')} 
+          disabled={isLoading}
+          className="w-full gap-2 bg-maintenance hover:bg-maintenance/90"
+        >
+          <Wrench className="h-4 w-4" />
+          Send to Maintenance
+        </Button>
+      );
+    }
+
+    // Default mode - show all available actions based on status
+    return (
+      <div className="space-y-3">
+        {item.status === 'available' && (
+          <Button 
+            onClick={() => handleAction('check-out')} 
+            disabled={isLoading}
+            className="w-full gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Check Out
+          </Button>
+        )}
+        {item.status === 'checked-out' && (
+          <Button 
+            onClick={() => handleAction('check-in')} 
+            disabled={isLoading}
+            className="w-full gap-2"
+          >
+            <LogIn className="h-4 w-4" />
+            Check In
+          </Button>
+        )}
+        {isAdmin && item.status === 'available' && (
+          <Button 
+            onClick={() => handleAction('maintenance')} 
+            disabled={isLoading}
+            variant="outline"
+            className="w-full gap-2 text-maintenance hover:text-maintenance"
+          >
+            <Wrench className="h-4 w-4" />
+            Send to Maintenance
+          </Button>
+        )}
+        {isAdmin && item.status === 'checked-out' && (
+          <Button 
+            onClick={() => handleAction('maintenance')} 
+            disabled={isLoading}
+            variant="outline"
+            className="w-full gap-2 text-maintenance hover:text-maintenance"
+          >
+            <Wrench className="h-4 w-4" />
+            Send to Maintenance
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  const getModeTitle = () => {
+    switch (scanMode) {
+      case 'check-in': return 'Check In Item';
+      case 'check-out': return 'Check Out Item';
+      case 'maintenance': return 'Send to Maintenance';
+      default: return 'Scanned Item';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Scanned Item</DialogTitle>
+          <DialogTitle>{getModeTitle()}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
@@ -137,29 +304,7 @@ export function ScanResultDialog({
             </div>
           </div>
 
-          {item.status === 'maintenance' ? (
-            <div className="flex items-center gap-3 p-4 bg-maintenance/10 rounded-lg text-maintenance">
-              <AlertTriangle className="h-5 w-5" />
-              <p className="text-sm font-medium">This item is under maintenance</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Label htmlFor="scanUserName">
-                {item.status === 'available' ? 'Your name (checking out):' : 'Your name (checking in):'}
-              </Label>
-              <Input
-                id="scanUserName"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Enter your name"
-                autoFocus
-              />
-              <Button onClick={handleAction} disabled={!userName.trim() || isLoading} className="w-full gap-2">
-                <ArrowLeftRight className="h-4 w-4" />
-                {item.status === 'available' ? 'Check Out' : 'Check In'}
-              </Button>
-            </div>
-          )}
+          {renderActions()}
         </div>
       </DialogContent>
     </Dialog>

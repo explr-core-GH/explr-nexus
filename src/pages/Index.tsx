@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { 
   Package, 
-  ScanLine, 
   Search, 
   Boxes, 
   CheckCircle2, 
@@ -9,7 +8,6 @@ import {
   Wrench,
   ShieldAlert
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -27,6 +25,7 @@ import { ItemDetailDialog } from '@/components/ItemDetailDialog';
 import { QRScanner } from '@/components/QRScanner';
 import { ScanResultDialog } from '@/components/ScanResultDialog';
 import { UserMenu } from '@/components/UserMenu';
+import { ScanButton, ScanMode } from '@/components/ScanButton';
 
 const Index = () => {
   const { 
@@ -37,6 +36,7 @@ const Index = () => {
     checkIn, 
     checkOut, 
     deleteItem, 
+    setMaintenance,
     findByQrCode, 
     getStats 
   } = useInventoryDB();
@@ -49,6 +49,7 @@ const Index = () => {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanMode, setScanMode] = useState<ScanMode>('default');
   const [scanResultOpen, setScanResultOpen] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scanNotFound, setScanNotFound] = useState(false);
@@ -163,14 +164,13 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                onClick={() => setScannerOpen(true)}
-                size="lg"
-                className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
-              >
-                <ScanLine className="h-5 w-5" />
-                <span className="hidden sm:inline">Scan QR</span>
-              </Button>
+              <ScanButton 
+                onScan={(mode) => {
+                  setScanMode(mode);
+                  setScannerOpen(true);
+                }}
+                isAdmin={isAdmin}
+              />
               <UserMenu />
             </div>
           </div>
@@ -309,9 +309,12 @@ const Index = () => {
         item={scannedItem ? convertToUIItem(scannedItem) : null}
         notFound={scanNotFound}
         open={scanResultOpen}
+        scanMode={scanMode}
         onOpenChange={setScanResultOpen}
         onCheckIn={handleCheckIn}
         onCheckOut={handleCheckOut}
+        onMaintenance={(itemId) => setMaintenance(itemId)}
+        isAdmin={isAdmin}
       />
     </div>
   );

@@ -267,23 +267,35 @@ export function useInventoryDB() {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
-    if (!item || item.status !== 'checked-out') {
+    if (!item) return false;
+    
+    // Handle returning from maintenance (admin only)
+    if (item.status === 'maintenance') {
+      if (!isAdmin) {
+        toast({
+          title: 'Permission Denied',
+          description: 'Only admins can return items from maintenance',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    } else if (item.status !== 'checked-out') {
       toast({
         title: 'Cannot Check In',
         description: 'This item is not checked out',
         variant: 'destructive',
       });
       return false;
-    }
-
-    // Only allow check-in if user is admin or the one who checked it out
-    if (!isAdmin && item.checked_out_by !== user.id) {
-      toast({
-        title: 'Permission Denied',
-        description: 'You can only check in items you checked out',
-        variant: 'destructive',
-      });
-      return false;
+    } else {
+      // Only allow check-in if user is admin or the one who checked it out
+      if (!isAdmin && item.checked_out_by !== user.id) {
+        toast({
+          title: 'Permission Denied',
+          description: 'You can only check in items you checked out',
+          variant: 'destructive',
+        });
+        return false;
+      }
     }
 
     try {
@@ -334,6 +346,55 @@ export function useInventoryDB() {
     }
   };
 
+  const setMaintenance = async (itemId: string) => {
+    if (!user || !isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can send items to maintenance',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    const item = items.find(i => i.id === itemId);
+    if (!item) return false;
+
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({
+          status: 'maintenance',
+          checked_out_by: null,
+          checked_out_at: null,
+        })
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      setItems(prev =>
+        prev.map(i =>
+          i.id === itemId
+            ? { ...i, status: 'maintenance' as const, checked_out_by: null, checked_out_at: null }
+            : i
+        )
+      );
+
+      toast({
+        title: 'Sent to Maintenance',
+        description: `${item.name} has been sent for maintenance`,
+      });
+      return true;
+    } catch (error: any) {
+      console.error('Error setting maintenance:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send item to maintenance',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const findByQrCode = (qrCode: string): InventoryItem | undefined => {
     return items.find(item => item.qr_code === qrCode);
   };
@@ -356,6 +417,7 @@ export function useInventoryDB() {
     deleteItem,
     checkOut,
     checkIn,
+    setMaintenance,
     findByQrCode,
     getStats,
     refetch: () => Promise.all([fetchItems(), fetchLogs()]),
