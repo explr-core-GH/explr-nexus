@@ -35,6 +35,7 @@ const Index = () => {
     isAdmin,
     addItem,
     bulkAddItems,
+    updateItem,
     checkIn, 
     checkOut, 
     deleteItem, 
@@ -307,6 +308,7 @@ const Index = () => {
         onCheckIn={(itemId) => checkIn(itemId, userName)}
         onCheckOut={(itemId) => checkOut(itemId, userName)}
         onDelete={handleDelete}
+        onUpdate={updateItem}
         isAdmin={isAdmin}
       />
 

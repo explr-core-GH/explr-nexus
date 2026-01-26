@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2 } from 'lucide-react';
+import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
+import { EditItemDialog } from '@/components/EditItemDialog';
 import { InventoryItem } from '@/types/inventory';
 import { format } from 'date-fns';
 
@@ -31,6 +32,13 @@ interface ItemDetailDialogProps {
   onCheckIn: (itemId: string, userName: string) => Promise<boolean> | boolean;
   onCheckOut: (itemId: string, userName: string) => Promise<boolean> | boolean;
   onDelete: (itemId: string) => Promise<void> | void;
+  onUpdate?: (id: string, updates: {
+    name: string;
+    description: string;
+    category: string;
+    location: string;
+    image_url: string | null;
+  }) => Promise<boolean>;
   isAdmin?: boolean;
 }
 
@@ -41,6 +49,7 @@ export function ItemDetailDialog({
   onCheckIn,
   onCheckOut,
   onDelete,
+  onUpdate,
   isAdmin = false,
 }: ItemDetailDialogProps) {
   const [userName, setUserName] = useState('');
@@ -172,30 +181,44 @@ export function ItemDetailDialog({
             </div>
           )}
 
-          {/* Delete Action - Only show for admins */}
+          {/* Admin Actions */}
           {isAdmin && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="w-full text-destructive hover:text-destructive gap-2">
-                <Trash2 className="h-4 w-4" />
-                Delete Item
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Item</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            <div className="flex gap-2">
+              {onUpdate && (
+                <EditItemDialog
+                  item={item}
+                  onUpdate={onUpdate}
+                  trigger={
+                    <Button variant="outline" className="flex-1 gap-2">
+                      <Pencil className="h-4 w-4" />
+                      Edit Item
+                    </Button>
+                  }
+                />
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="flex-1 text-destructive hover:text-destructive gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Delete Item
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           )}
         </div>
       </DialogContent>
