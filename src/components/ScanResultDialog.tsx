@@ -40,8 +40,9 @@ export function ScanResultDialog({
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance') => {
+  const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance' | 'return-from-maintenance') => {
     if (!item) return;
+    // Only require userName for regular check-in/check-out, not for return from maintenance
     if ((action === 'check-in' || action === 'check-out') && !userName.trim()) return;
     
     setIsLoading(true);
@@ -50,14 +51,14 @@ export function ScanResultDialog({
       let success = false;
       if (action === 'check-out') {
         success = await onCheckOut(item.id);
-      } else if (action === 'check-in') {
+      } else if (action === 'check-in' || action === 'return-from-maintenance') {
         success = await onCheckIn(item.id);
       } else if (action === 'maintenance' && onMaintenance) {
         success = await onMaintenance(item.id);
       }
       
       if (success) {
-        setLastAction(action);
+        setLastAction(action === 'return-from-maintenance' ? 'check-in' : action);
         setActionComplete(true);
       }
     } finally {
@@ -151,7 +152,7 @@ export function ScanResultDialog({
               <p className="text-sm font-medium">This item is under maintenance</p>
             </div>
             <Button 
-              onClick={() => handleAction('check-in')} 
+              onClick={() => handleAction('return-from-maintenance')} 
               disabled={isLoading}
               variant="outline"
               className="w-full gap-2"
