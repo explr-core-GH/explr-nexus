@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle, XCircle, ArrowLeftRight, AlertTriangle, LogIn, LogOut, Wrench, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -10,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { LocationSelect } from '@/components/LocationSelect';
+import { Location } from '@/hooks/useLocations';
 import { InventoryItem } from '@/types/inventory';
 import { ScanMode } from '@/components/ScanButton';
 
@@ -18,10 +19,11 @@ interface ScanResultDialogProps {
   notFound: boolean;
   open: boolean;
   scanMode: ScanMode;
+  locations: Location[];
   onOpenChange: (open: boolean) => void;
-  onCheckIn: (itemId: string, location?: string) => Promise<boolean> | boolean;
-  onCheckOut: (itemId: string, location?: string) => Promise<boolean> | boolean;
-  onMaintenance?: (itemId: string, location?: string) => Promise<boolean> | boolean;
+  onCheckIn: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
+  onMaintenance?: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
   isAdmin?: boolean;
 }
 
@@ -30,13 +32,14 @@ export function ScanResultDialog({
   notFound,
   open,
   scanMode,
+  locations,
   onOpenChange,
   onCheckIn,
   onCheckOut,
   onMaintenance,
   isAdmin = false,
 }: ScanResultDialogProps) {
-  const [location, setLocation] = useState('');
+  const [locationId, setLocationId] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,13 +51,13 @@ export function ScanResultDialog({
     
     try {
       let success = false;
-      const newLocation = location.trim() || undefined;
+      const newLocationId = locationId || undefined;
       if (action === 'check-out') {
-        success = await onCheckOut(item.id, newLocation);
+        success = await onCheckOut(item.id, newLocationId);
       } else if (action === 'check-in' || action === 'return-from-maintenance') {
-        success = await onCheckIn(item.id, newLocation);
+        success = await onCheckIn(item.id, newLocationId);
       } else if (action === 'maintenance' && onMaintenance) {
-        success = await onMaintenance(item.id, newLocation);
+        success = await onMaintenance(item.id, newLocationId);
       }
       
       if (success) {
@@ -67,7 +70,7 @@ export function ScanResultDialog({
   };
 
   const handleClose = () => {
-    setLocation('');
+    setLocationId('');
     setActionComplete(false);
     setLastAction(null);
     onOpenChange(false);
@@ -320,11 +323,11 @@ export function ScanResultDialog({
             <CollapsibleContent className="pt-2">
               <div className="space-y-2">
                 <Label htmlFor="location" className="text-sm">New Location</Label>
-                <Input
-                  id="location"
-                  placeholder={item.location}
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                <LocationSelect
+                  locations={locations}
+                  value={locationId}
+                  onValueChange={setLocationId}
+                  placeholder={item.location || "Select location"}
                 />
               </div>
             </CollapsibleContent>

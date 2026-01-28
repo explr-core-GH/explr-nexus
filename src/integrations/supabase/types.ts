@@ -62,6 +62,7 @@ export type Database = {
           id: string
           image_url: string | null
           location: string
+          location_id: string | null
           name: string
           qr_code: string
           status: string
@@ -76,6 +77,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location: string
+          location_id?: string | null
           name: string
           qr_code: string
           status?: string
@@ -90,9 +92,48 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string
+          location_id?: string | null
           name?: string
           qr_code?: string
           status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
           updated_at?: string
         }
         Relationships: []

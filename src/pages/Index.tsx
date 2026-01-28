@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useInventoryDB, InventoryItem } from '@/hooks/useInventoryDB';
+import { useLocations } from '@/hooks/useLocations';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatsCard } from '@/components/StatsCard';
 import { ItemCard } from '@/components/ItemCard';
@@ -44,6 +45,7 @@ const Index = () => {
     getStats 
   } = useInventoryDB();
   
+  const { locations } = useLocations();
   const { profile } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,36 +101,56 @@ const Index = () => {
 
   const userName = profile?.full_name || 'Unknown User';
 
-  const handleAddItem = async (item: { name: string; description: string; category: string; location: string; imageUrl?: string }) => {
+  const handleAddItem = async (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string }) => {
     await addItem({
       name: item.name,
       description: item.description,
       category: item.category,
       location: item.location,
+      location_id: item.locationId,
       image_url: item.imageUrl,
     });
   };
 
-  const handleCheckIn = async (itemId: string, location?: string) => {
-    const result = await checkIn(itemId, userName, location);
+  const handleCheckIn = async (itemId: string, locationId?: string) => {
+    const result = await checkIn(itemId, userName, locationId, locations);
     if (result && scannedItem) {
-      setScannedItem({ ...scannedItem, status: 'available', checked_out_by: null, checked_out_at: null, ...(location && { location }) });
+      const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
+      setScannedItem({ 
+        ...scannedItem, 
+        status: 'available', 
+        checked_out_by: null, 
+        checked_out_at: null, 
+        ...(newLocation && { location: newLocation.name, location_id: locationId }) 
+      });
     }
     return result;
   };
 
-  const handleCheckOut = async (itemId: string, location?: string) => {
-    const result = await checkOut(itemId, userName, location);
+  const handleCheckOut = async (itemId: string, locationId?: string) => {
+    const result = await checkOut(itemId, userName, locationId, locations);
     if (result && scannedItem) {
-      setScannedItem({ ...scannedItem, status: 'checked-out', ...(location && { location }) });
+      const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
+      setScannedItem({ 
+        ...scannedItem, 
+        status: 'checked-out', 
+        ...(newLocation && { location: newLocation.name, location_id: locationId }) 
+      });
     }
     return result;
   };
 
-  const handleMaintenance = async (itemId: string, location?: string) => {
-    const result = await setMaintenance(itemId, location);
+  const handleMaintenance = async (itemId: string, locationId?: string) => {
+    const result = await setMaintenance(itemId, locationId, locations);
     if (result && scannedItem) {
-      setScannedItem({ ...scannedItem, status: 'maintenance', checked_out_by: null, checked_out_at: null, ...(location && { location }) });
+      const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
+      setScannedItem({ 
+        ...scannedItem, 
+        status: 'maintenance', 
+        checked_out_by: null, 
+        checked_out_at: null, 
+        ...(newLocation && { location: newLocation.name, location_id: locationId }) 
+      });
     }
     return result;
   };
@@ -262,7 +284,7 @@ const Index = () => {
             {isAdmin && (
               <>
                 <CSVImportDialog onImport={bulkAddItems} />
-                <AddItemDialog onAdd={handleAddItem} />
+                <AddItemDialog onAdd={handleAddItem} locations={locations} />
               </>
             )}
           </div>
@@ -284,7 +306,7 @@ const Index = () => {
             </p>
             {items.length === 0 && isAdmin && (
               <div className="mt-4">
-                <AddItemDialog onAdd={handleAddItem} />
+                <AddItemDialog onAdd={handleAddItem} locations={locations} />
               </div>
             )}
           </div>
@@ -328,6 +350,7 @@ const Index = () => {
         notFound={scanNotFound}
         open={scanResultOpen}
         scanMode={scanMode}
+        locations={locations}
         onOpenChange={setScanResultOpen}
         onCheckIn={handleCheckIn}
         onCheckOut={handleCheckOut}

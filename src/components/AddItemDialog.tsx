@@ -20,10 +20,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ImageUpload';
-import { InventoryItem } from '@/types/inventory';
+import { LocationSelect } from '@/components/LocationSelect';
+import { Location } from '@/hooks/useLocations';
 
 interface AddItemDialogProps {
-  onAdd: (item: Omit<InventoryItem, 'id' | 'qrCode' | 'createdAt' | 'lastUpdated' | 'status'>) => void;
+  onAdd: (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string }) => void;
+  locations: Location[];
 }
 
 const CATEGORIES = [
@@ -36,30 +38,33 @@ const CATEGORIES = [
   'Other',
 ];
 
-export function AddItemDialog({ onAdd }: AddItemDialogProps) {
+export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [location, setLocation] = useState('');
+  const [locationId, setLocationId] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const selectedLocation = locations.find(l => l.id === locationId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !category || !location) return;
+    if (!name || !category || !locationId) return;
 
     onAdd({
       name,
       description,
       category,
-      location,
+      location: selectedLocation?.name || '',
+      locationId,
       imageUrl: imageUrl || undefined,
     });
 
     setName('');
     setDescription('');
     setCategory('');
-    setLocation('');
+    setLocationId('');
     setImageUrl(null);
     setOpen(false);
   };
@@ -123,19 +128,23 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="location">Location *</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g., Warehouse A, Shelf 3"
-              required
+            <LocationSelect
+              locations={locations}
+              value={locationId}
+              onValueChange={setLocationId}
+              placeholder="Select location"
             />
+            {locations.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No locations available. Add locations in the Admin panel first.
+              </p>
+            )}
           </div>
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" disabled={!locationId}>
               Add Item
             </Button>
           </div>
