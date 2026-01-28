@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Package, 
   Search, 
   CheckCircle2, 
   Clock, 
   Wrench,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -223,6 +226,17 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               <InstallPWAButton />
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <Link to="/resources">
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Resources</span>
+                </Link>
+              </Button>
               {isAdmin && <AdminNotifications />}
               {userRole === 'member' && <MyRequestsSheet />}
               {canCheckInOut && (
