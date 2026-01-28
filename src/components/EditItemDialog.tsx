@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ImageUpload';
+import { LocationSelect } from '@/components/LocationSelect';
+import { Location } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
 
 interface EditItemDialogProps {
@@ -29,13 +31,16 @@ interface EditItemDialogProps {
     description: string;
     category: string;
     location: string;
+    locationId?: string;
     imageUrl?: string;
   };
+  locations?: Location[];
   onUpdate: (id: string, updates: {
     name: string;
     description: string;
     category: string;
     location: string;
+    location_id: string | null;
     image_url: string | null;
   }) => Promise<boolean>;
   trigger?: React.ReactNode;
@@ -51,12 +56,13 @@ const CATEGORIES = [
   'Other',
 ];
 
-export function EditItemDialog({ item, onUpdate, trigger }: EditItemDialogProps) {
+export function EditItemDialog({ item, locations = [], onUpdate, trigger }: EditItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description);
   const [category, setCategory] = useState(item.category);
   const [location, setLocation] = useState(item.location);
+  const [locationId, setLocationId] = useState<string | undefined>(item.locationId);
   const [imageUrl, setImageUrl] = useState<string | null>(item.imageUrl || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -67,8 +73,17 @@ export function EditItemDialog({ item, onUpdate, trigger }: EditItemDialogProps)
     setDescription(item.description);
     setCategory(item.category);
     setLocation(item.location);
+    setLocationId(item.locationId);
     setImageUrl(item.imageUrl || null);
   }, [item]);
+
+  const handleLocationChange = (locId: string) => {
+    setLocationId(locId);
+    const selectedLocation = locations.find(l => l.id === locId);
+    if (selectedLocation) {
+      setLocation(selectedLocation.name);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +96,7 @@ export function EditItemDialog({ item, onUpdate, trigger }: EditItemDialogProps)
         description,
         category,
         location,
+        location_id: locationId || null,
         image_url: imageUrl,
       });
 
@@ -157,13 +173,21 @@ export function EditItemDialog({ item, onUpdate, trigger }: EditItemDialogProps)
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-location">Location *</Label>
-            <Input
-              id="edit-location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g., Warehouse A, Shelf 3"
-              required
-            />
+            {locations.length > 0 ? (
+              <LocationSelect
+                locations={locations}
+                value={locationId}
+                onValueChange={handleLocationChange}
+              />
+            ) : (
+              <Input
+                id="edit-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g., Warehouse A, Shelf 3"
+                required
+              />
+            )}
           </div>
           <div className="flex gap-3 pt-4">
             <Button 

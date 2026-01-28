@@ -168,6 +168,7 @@ const Index = () => {
     status: item.status,
     qrCode: item.qr_code,
     location: item.location,
+    locationId: item.location_id || undefined,
     imageUrl: item.image_url || undefined,
     checkedOutBy: item.checked_out_by || undefined,
     checkedOutAt: item.checked_out_at || undefined,
@@ -333,6 +334,7 @@ const Index = () => {
         onCheckOut={(itemId) => checkOut(itemId, userName)}
         onDelete={handleDelete}
         onUpdate={updateItem}
+        locations={locations}
         isAdmin={isAdmin}
       />
 
