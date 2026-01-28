@@ -60,10 +60,10 @@ export function AdminNotifications() {
     <>
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="relative">
-            <Bell className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="relative text-primary-foreground hover:bg-primary-foreground/10">
+            <Bell className="h-5 w-5" />
             {pendingCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center animate-pulse">
                 {pendingCount}
               </span>
             )}
