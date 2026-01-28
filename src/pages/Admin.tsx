@@ -12,7 +12,8 @@ import {
   Map,
   Eye,
   UserCheck,
-  Tags
+  Tags,
+  BookOpen
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ import { AddLocationDialog } from '@/components/AddLocationDialog';
 import { LocationsMap } from '@/components/LocationsMap';
 import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
+import { ResourceManagement } from '@/components/ResourceManagement';
 import { format } from 'date-fns';
 
 const Admin = () => {
@@ -135,7 +137,7 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Users
@@ -143,6 +145,10 @@ const Admin = () => {
             <TabsTrigger value="locations" className="gap-2">
               <MapPin className="h-4 w-4" />
               Locations
+            </TabsTrigger>
+            <TabsTrigger value="resources" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              Resources
             </TabsTrigger>
           </TabsList>
 
@@ -515,6 +521,11 @@ const Admin = () => {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Resources Tab */}
+          <TabsContent value="resources" className="space-y-6 mt-6">
+            <ResourceManagement />
           </TabsContent>
         </Tabs>
       </main>
