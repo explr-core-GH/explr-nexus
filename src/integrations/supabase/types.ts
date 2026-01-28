@@ -111,6 +111,59 @@ export type Database = {
           },
         ]
       }
+      item_requests: {
+        Row: {
+          admin_response: string | null
+          created_at: string
+          id: string
+          item_id: string
+          item_name: string
+          message: string | null
+          requester_email: string | null
+          requester_id: string
+          requester_name: string
+          requester_organization: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          item_name: string
+          message?: string | null
+          requester_email?: string | null
+          requester_id: string
+          requester_name: string
+          requester_organization?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_name?: string
+          message?: string | null
+          requester_email?: string | null
+          requester_id?: string
+          requester_name?: string
+          requester_organization?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_requests_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string

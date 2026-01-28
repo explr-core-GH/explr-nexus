@@ -7,6 +7,7 @@ interface Profile {
   user_id: string;
   full_name: string;
   email: string | null;
+  organization_name: string | null;
   tags: string[];
 }
 

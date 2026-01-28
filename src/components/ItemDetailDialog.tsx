@@ -22,9 +22,11 @@ import {
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { EditItemDialog } from '@/components/EditItemDialog';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
+import { RequestItemButton } from '@/components/RequestItemButton';
 import { InventoryItem } from '@/types/inventory';
 import { Location } from '@/hooks/useLocations';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ItemDetailDialogProps {
   item: InventoryItem | null;
@@ -63,6 +65,8 @@ export function ItemDetailDialog({
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedUserName, setSelectedUserName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { userRole } = useAuth();
+  const isMember = userRole === 'member';
 
   if (!item) return null;
 
@@ -197,6 +201,11 @@ export function ItemDetailDialog({
                 </Button>
               </div>
             </div>
+          )}
+
+          {/* Request Button for Members */}
+          {isMember && item.status === 'available' && (
+            <RequestItemButton item={item} />
           )}
           {isAdmin && (
             <div className="flex gap-2">
