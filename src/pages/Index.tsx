@@ -109,18 +109,26 @@ const Index = () => {
     });
   };
 
-  const handleCheckIn = async (itemId: string) => {
-    const result = await checkIn(itemId, userName);
+  const handleCheckIn = async (itemId: string, location?: string) => {
+    const result = await checkIn(itemId, userName, location);
     if (result && scannedItem) {
-      setScannedItem({ ...scannedItem, status: 'available', checked_out_by: null, checked_out_at: null });
+      setScannedItem({ ...scannedItem, status: 'available', checked_out_by: null, checked_out_at: null, ...(location && { location }) });
     }
     return result;
   };
 
-  const handleCheckOut = async (itemId: string) => {
-    const result = await checkOut(itemId, userName);
+  const handleCheckOut = async (itemId: string, location?: string) => {
+    const result = await checkOut(itemId, userName, location);
     if (result && scannedItem) {
-      setScannedItem({ ...scannedItem, status: 'checked-out' });
+      setScannedItem({ ...scannedItem, status: 'checked-out', ...(location && { location }) });
+    }
+    return result;
+  };
+
+  const handleMaintenance = async (itemId: string, location?: string) => {
+    const result = await setMaintenance(itemId, location);
+    if (result && scannedItem) {
+      setScannedItem({ ...scannedItem, status: 'maintenance', checked_out_by: null, checked_out_at: null, ...(location && { location }) });
     }
     return result;
   };
@@ -323,7 +331,7 @@ const Index = () => {
         onOpenChange={setScanResultOpen}
         onCheckIn={handleCheckIn}
         onCheckOut={handleCheckOut}
-        onMaintenance={(itemId) => setMaintenance(itemId)}
+        onMaintenance={handleMaintenance}
         isAdmin={isAdmin}
       />
     </div>

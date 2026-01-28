@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { CheckCircle, XCircle, ArrowLeftRight, AlertTriangle, LogIn, LogOut, Wrench } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowLeftRight, AlertTriangle, LogIn, LogOut, Wrench, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -18,9 +19,9 @@ interface ScanResultDialogProps {
   open: boolean;
   scanMode: ScanMode;
   onOpenChange: (open: boolean) => void;
-  onCheckIn: (itemId: string) => Promise<boolean> | boolean;
-  onCheckOut: (itemId: string) => Promise<boolean> | boolean;
-  onMaintenance?: (itemId: string) => Promise<boolean> | boolean;
+  onCheckIn: (itemId: string, location?: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, location?: string) => Promise<boolean> | boolean;
+  onMaintenance?: (itemId: string, location?: string) => Promise<boolean> | boolean;
   isAdmin?: boolean;
 }
 
@@ -36,6 +37,7 @@ export function ScanResultDialog({
   isAdmin = false,
 }: ScanResultDialogProps) {
   const [userName, setUserName] = useState('');
+  const [location, setLocation] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,12 +51,13 @@ export function ScanResultDialog({
     
     try {
       let success = false;
+      const newLocation = location.trim() || undefined;
       if (action === 'check-out') {
-        success = await onCheckOut(item.id);
+        success = await onCheckOut(item.id, newLocation);
       } else if (action === 'check-in' || action === 'return-from-maintenance') {
-        success = await onCheckIn(item.id);
+        success = await onCheckIn(item.id, newLocation);
       } else if (action === 'maintenance' && onMaintenance) {
-        success = await onMaintenance(item.id);
+        success = await onMaintenance(item.id, newLocation);
       }
       
       if (success) {
@@ -68,6 +71,7 @@ export function ScanResultDialog({
 
   const handleClose = () => {
     setUserName('');
+    setLocation('');
     setActionComplete(false);
     setLastAction(null);
     onOpenChange(false);
@@ -303,7 +307,32 @@ export function ScanResultDialog({
               </span>
               <span className="text-xs text-muted-foreground font-mono">{item.qrCode}</span>
             </div>
+            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              <span>{item.location}</span>
+            </div>
           </div>
+
+          {/* Optional Location Update */}
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+                <MapPin className="h-4 w-4" />
+                Update location (optional)
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="location" className="text-sm">New Location</Label>
+                <Input
+                  id="location"
+                  placeholder={item.location}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {renderActions()}
         </div>

@@ -207,7 +207,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string) => {
+  const checkOut = async (itemId: string, userName: string, newLocation?: string) => {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
@@ -222,13 +222,18 @@ export function useInventoryDB() {
 
     try {
       // Update item
+      const updateData: Record<string, unknown> = {
+        status: 'checked-out',
+        checked_out_by: user.id,
+        checked_out_at: new Date().toISOString(),
+      };
+      if (newLocation) {
+        updateData.location = newLocation;
+      }
+      
       const { error: updateError } = await supabase
         .from('inventory_items')
-        .update({
-          status: 'checked-out',
-          checked_out_by: user.id,
-          checked_out_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', itemId);
 
       if (updateError) throw updateError;
@@ -250,7 +255,7 @@ export function useInventoryDB() {
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString() }
+            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation }) }
             : i
         )
       );
@@ -268,7 +273,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkIn = async (itemId: string, userName: string) => {
+  const checkIn = async (itemId: string, userName: string, newLocation?: string) => {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
@@ -305,13 +310,18 @@ export function useInventoryDB() {
 
     try {
       // Update item
+      const updateData: Record<string, unknown> = {
+        status: 'available',
+        checked_out_by: null,
+        checked_out_at: null,
+      };
+      if (newLocation) {
+        updateData.location = newLocation;
+      }
+      
       const { error: updateError } = await supabase
         .from('inventory_items')
-        .update({
-          status: 'available',
-          checked_out_by: null,
-          checked_out_at: null,
-        })
+        .update(updateData)
         .eq('id', itemId);
 
       if (updateError) throw updateError;
@@ -333,7 +343,7 @@ export function useInventoryDB() {
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'available' as const, checked_out_by: null, checked_out_at: null }
+            ? { ...i, status: 'available' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation }) }
             : i
         )
       );
@@ -351,7 +361,7 @@ export function useInventoryDB() {
     }
   };
 
-  const setMaintenance = async (itemId: string) => {
+  const setMaintenance = async (itemId: string, newLocation?: string) => {
     if (!user || !isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -365,13 +375,18 @@ export function useInventoryDB() {
     if (!item) return false;
 
     try {
+      const updateData: Record<string, unknown> = {
+        status: 'maintenance',
+        checked_out_by: null,
+        checked_out_at: null,
+      };
+      if (newLocation) {
+        updateData.location = newLocation;
+      }
+      
       const { error } = await supabase
         .from('inventory_items')
-        .update({
-          status: 'maintenance',
-          checked_out_by: null,
-          checked_out_at: null,
-        })
+        .update(updateData)
         .eq('id', itemId);
 
       if (error) throw error;
@@ -379,7 +394,7 @@ export function useInventoryDB() {
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'maintenance' as const, checked_out_by: null, checked_out_at: null }
+            ? { ...i, status: 'maintenance' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation }) }
             : i
         )
       );
