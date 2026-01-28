@@ -191,11 +191,58 @@ export function useUserManagement() {
     }
   };
 
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can delete users',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast({
+          title: 'Error',
+          description: data.error,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      toast({
+        title: 'User Deleted',
+        description: `${userName} has been removed from the system`,
+      });
+
+      // Update local state
+      setUsers(prev => prev.filter(u => u.user_id !== userId));
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete user',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
     users,
     isLoading,
     setUserRole,
     updateUserTags,
+    deleteUser,
     promoteToAdmin,
     removeAdmin,
     refetch: fetchUsers,
