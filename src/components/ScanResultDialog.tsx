@@ -11,9 +11,11 @@ import {
 } from '@/components/ui/dialog';
 import { LocationSelect } from '@/components/LocationSelect';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
+import { RequestItemButton } from '@/components/RequestItemButton';
 import { Location } from '@/hooks/useLocations';
 import { InventoryItem } from '@/types/inventory';
 import { ScanMode } from '@/components/ScanButton';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ScanResultDialogProps {
   item: InventoryItem | null;
@@ -50,6 +52,8 @@ export function ScanResultDialog({
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { userRole } = useAuth();
+  const isMember = userRole === 'member';
 
   const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance' | 'return-from-maintenance') => {
     if (!item || !selectedUserName) return;
@@ -159,11 +163,14 @@ export function ScanResultDialog({
 
   // Determine what actions are available based on scan mode and item status
   const renderActions = () => {
-    // If user cannot check in/out (member role), show read-only info
+    // If user cannot check in/out (member role), show request button for available items
     if (!canCheckInOut) {
+      if (item.status === 'available') {
+        return <RequestItemButton item={item} />;
+      }
       return (
         <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-lg text-muted-foreground">
-          <p className="text-sm">You can view items but cannot check them in or out.</p>
+          <p className="text-sm">This item is currently not available.</p>
         </div>
       );
     }

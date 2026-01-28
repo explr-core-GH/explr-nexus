@@ -29,6 +29,7 @@ import { ScanResultDialog } from '@/components/ScanResultDialog';
 import { UserMenu } from '@/components/UserMenu';
 import { ScanButton, ScanMode } from '@/components/ScanButton';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
+import { AdminNotifications } from '@/components/AdminNotifications';
 
 const Index = () => {
   const { 
@@ -219,6 +220,7 @@ const Index = () => {
               <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
             </div>
             <div className="flex items-center gap-2">
+              {isAdmin && <AdminNotifications />}
               {canCheckInOut && (
                 <ScanButton 
                   onScan={(mode) => {
