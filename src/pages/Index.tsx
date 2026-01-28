@@ -48,7 +48,7 @@ const Index = () => {
   
   const { locations } = useLocations();
   const { users: selectableUsers } = useSelectableUsers();
-  const { profile, canCheckInOut } = useAuth();
+  const { profile, canCheckInOut, userRole, userTags } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -70,6 +70,22 @@ const Index = () => {
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
+      // Tag-based filtering for members
+      // Members only see items with matching tags or items tagged with "All"
+      if (userRole === 'member') {
+        const itemTags = item.tags || [];
+        // If item has no tags, member can't see it
+        if (itemTags.length === 0) return false;
+        // If item has "All" tag, member can see it
+        if (itemTags.includes('All')) {
+          // Continue to other filters
+        } else {
+          // Check if member has any matching tags
+          const hasMatchingTag = itemTags.some(tag => userTags.includes(tag));
+          if (!hasMatchingTag) return false;
+        }
+      }
+
       const matchesSearch = 
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
@@ -81,7 +97,7 @@ const Index = () => {
       
       return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [items, searchQuery, statusFilter, categoryFilter]);
+  }, [items, searchQuery, statusFilter, categoryFilter, userRole, userTags]);
 
   const handleItemClick = (item: InventoryItem) => {
     setSelectedItem(item);
