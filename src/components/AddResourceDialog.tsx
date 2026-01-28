@@ -24,6 +24,7 @@ import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { NewResource } from '@/hooks/useResources';
 import { getVideoThumbnailUrl, isVideoUrl } from '@/lib/videoThumbnails';
 import { generatePdfThumbnailFile, isPdfFile } from '@/lib/documentThumbnails';
+import { fetchOpenGraphData, isRegularWebsite } from '@/lib/openGraph';
 
 interface AddResourceDialogProps {
   onAdd: (resource: NewResource) => Promise<any>;
@@ -42,37 +43,73 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [autoThumbnailUrl, setAutoThumbnailUrl] = useState<string | null>(null);
   const [autoThumbnailFile, setAutoThumbnailFile] = useState<File | null>(null);
+  const [autoThumbnailSource, setAutoThumbnailSource] = useState<string | null>(null);
   const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-fetch video thumbnail when URL changes
+  // Auto-fetch thumbnail when URL changes (for videos and links)
   useEffect(() => {
     const fetchThumbnail = async () => {
-      if (type === 'video' && url && isVideoUrl(url)) {
+      if (!url) {
+        setAutoThumbnailUrl(null);
+        setAutoThumbnailFile(null);
+        setAutoThumbnailSource(null);
+        return;
+      }
+
+      // For video type, check if it's a video URL
+      if (type === 'video' && isVideoUrl(url)) {
         setIsFetchingThumbnail(true);
         try {
           const thumbnailUrl = await getVideoThumbnailUrl(url);
           if (thumbnailUrl) {
             setAutoThumbnailUrl(thumbnailUrl);
             setAutoThumbnailFile(null);
+            setAutoThumbnailSource('Video');
           }
         } catch (error) {
           console.error('Error fetching video thumbnail:', error);
         } finally {
           setIsFetchingThumbnail(false);
         }
+      } 
+      // For link type or video with non-video URL, try OpenGraph
+      else if (type === 'link' || (type === 'video' && !isVideoUrl(url))) {
+        if (isRegularWebsite(url) || (type === 'link' && url.startsWith('http'))) {
+          setIsFetchingThumbnail(true);
+          try {
+            const ogData = await fetchOpenGraphData(url);
+            if (ogData?.imageUrl) {
+              setAutoThumbnailUrl(ogData.imageUrl);
+              setAutoThumbnailFile(null);
+              setAutoThumbnailSource('Link');
+              // Auto-fill title and description if empty
+              if (!title && ogData.title) {
+                setTitle(ogData.title);
+              }
+              if (!description && ogData.description) {
+                setDescription(ogData.description);
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching OpenGraph data:', error);
+          } finally {
+            setIsFetchingThumbnail(false);
+          }
+        }
       } else if (!selectedFile) {
         setAutoThumbnailUrl(null);
         setAutoThumbnailFile(null);
+        setAutoThumbnailSource(null);
       }
     };
 
     // Debounce the fetch
-    const timeoutId = setTimeout(fetchThumbnail, 500);
+    const timeoutId = setTimeout(fetchThumbnail, 800);
     return () => clearTimeout(timeoutId);
-  }, [url, type, selectedFile]);
+  }, [url, type]);
 
   // Auto-generate PDF thumbnail when file is selected
   useEffect(() => {
@@ -83,6 +120,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
           const thumbnailFile = await generatePdfThumbnailFile(selectedFile);
           if (thumbnailFile) {
             setAutoThumbnailFile(thumbnailFile);
+            setAutoThumbnailSource('PDF');
             // Create preview URL
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -111,6 +149,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     setThumbnailPreview(null);
     setAutoThumbnailUrl(null);
     setAutoThumbnailFile(null);
+    setAutoThumbnailSource(null);
     setTags([]);
   };
 
@@ -134,7 +173,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
       }
       
       // Determine which thumbnail to upload
-      // Priority: custom uploaded > auto-generated file (PDF) > auto URL (video)
+      // Priority: custom uploaded > auto-generated file (PDF) > auto URL (video/link)
       if (selectedThumbnail) {
         thumbnailPath = await uploadFile(selectedThumbnail);
       } else if (autoThumbnailFile) {
@@ -144,7 +183,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
       
       // For the thumbnail_url, we'll store either:
       // 1. The uploaded file path (if custom or PDF auto-thumbnail uploaded)
-      // 2. The auto-detected video thumbnail URL (if available and no custom)
+      // 2. The auto-detected thumbnail URL (video or OpenGraph)
       const finalThumbnailUrl = thumbnailPath || (autoThumbnailUrl && !autoThumbnailFile ? autoThumbnailUrl : undefined);
       
       await onAdd({
@@ -171,6 +210,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
       // Clear any existing auto-thumbnail to regenerate
       setAutoThumbnailUrl(null);
       setAutoThumbnailFile(null);
+      setAutoThumbnailSource(null);
     }
   };
 
@@ -201,7 +241,6 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   // Determine which thumbnail to show
   const displayThumbnail = thumbnailPreview || autoThumbnailUrl;
   const isAutoThumbnail = !thumbnailPreview && autoThumbnailUrl;
-  const autoThumbnailSource = autoThumbnailFile ? 'PDF' : (isVideoUrl(url) ? 'Video' : null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -293,11 +332,11 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                   placeholder={type === 'video' ? 'https://youtube.com/watch?v=...' : 'https://...'}
                   required={needsUrl}
                 />
-                {type === 'video' && (
-                  <p className="text-xs text-muted-foreground">
-                    YouTube and Vimeo thumbnails are extracted automatically
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  {type === 'video' 
+                    ? 'YouTube and Vimeo thumbnails are extracted automatically'
+                    : 'Preview images are extracted automatically from websites'}
+                </p>
               </div>
             )}
 
@@ -334,6 +373,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                           setSelectedFile(null);
                           setAutoThumbnailUrl(null);
                           setAutoThumbnailFile(null);
+                          setAutoThumbnailSource(null);
                         }}
                       >
                         <X className="h-3 w-3" />
@@ -341,7 +381,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                     </div>
                   )}
                 </div>
-                {isPdfFile(selectedFile!) && (
+                {selectedFile && isPdfFile(selectedFile) && (
                   <p className="text-xs text-muted-foreground">
                     ✓ PDF preview will be generated automatically
                   </p>
@@ -365,9 +405,11 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
               <p className="text-xs text-muted-foreground mb-2">
                 {type === 'video' 
                   ? 'Auto-detected from video URL, or upload a custom image'
-                  : needsFile
-                    ? 'Auto-generated from PDF, or upload a custom image'
-                    : 'Add a thumbnail image that members will see'}
+                  : type === 'link'
+                    ? 'Auto-detected from website, or upload a custom image'
+                    : needsFile
+                      ? 'Auto-generated from PDF, or upload a custom image'
+                      : 'Add a thumbnail image that members will see'}
               </p>
               <div className="flex items-start gap-3">
                 <input
