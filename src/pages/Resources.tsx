@@ -92,13 +92,24 @@ const Resources = () => {
   const ResourceCard = ({ resource }: { resource: Resource }) => {
     const Icon = typeIcons[resource.type];
     const isFile = !!resource.file_path;
+    const thumbnailUrl = resource.thumbnail_url ? getFileUrl(resource.thumbnail_url) : null;
     
     return (
       <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow group"
+        className="cursor-pointer hover:shadow-md transition-shadow group overflow-hidden"
         onClick={() => handleResourceClick(resource)}
       >
-        <CardHeader className="pb-3">
+        {/* Thumbnail Image */}
+        {thumbnailUrl && (
+          <div className="aspect-video w-full overflow-hidden bg-muted">
+            <img 
+              src={thumbnailUrl} 
+              alt={resource.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        )}
+        <CardHeader className={thumbnailUrl ? "pb-3 pt-4" : "pb-3"}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-accent/10">
