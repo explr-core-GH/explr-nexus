@@ -31,6 +31,7 @@ import { ScanButton, ScanMode } from '@/components/ScanButton';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
 import { AdminNotifications } from '@/components/AdminNotifications';
 import { InstallPWAButton } from '@/components/InstallPWAButton';
+import { MyRequestsSheet } from '@/components/MyRequestsSheet';
 
 const Index = () => {
   const { 
@@ -223,6 +224,7 @@ const Index = () => {
             <div className="flex items-center gap-2">
               <InstallPWAButton />
               {isAdmin && <AdminNotifications />}
+              {userRole === 'member' && <MyRequestsSheet />}
               {canCheckInOut && (
                 <ScanButton 
                   onScan={(mode) => {
