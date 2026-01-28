@@ -1,8 +1,9 @@
 /**
  * Document thumbnail utilities
- * Note: PDF thumbnail generation requires server-side processing
- * For now, we'll indicate that PDF previews need to be uploaded manually
+ * Uses CloudConvert for server-side thumbnail generation
  */
+
+const DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
 
 /**
  * Check if a file is a PDF
@@ -13,27 +14,26 @@ export function isPdfFile(file: File | null): boolean {
 }
 
 /**
- * Check if we can auto-generate a thumbnail for this file type
- * Currently, only PDFs would benefit from auto-thumbnails, but
- * client-side PDF rendering has compatibility issues.
- * Returns false - thumbnails should be uploaded manually or we use placeholders.
+ * Check if a file is a document that can have thumbnails generated
  */
-export function canGenerateThumbnail(file: File): boolean {
-  // PDF thumbnail generation disabled due to build compatibility issues
-  // Users can upload custom thumbnails instead
-  return false;
+export function isDocumentFile(file: File | null): boolean {
+  if (!file) return false;
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  return ext ? DOCUMENT_EXTENSIONS.includes(ext) : false;
 }
 
 /**
- * Placeholder for future PDF thumbnail generation
- * Returns null - thumbnails should be uploaded manually
+ * Get the file extension from a filename
  */
-export async function generatePdfThumbnailFile(
-  file: File,
-  maxWidth: number = 400
-): Promise<File | null> {
-  // PDF thumbnail generation is not available client-side
-  // due to compatibility issues with pdfjs-dist and Vite build targets
-  console.log('PDF thumbnail generation not available - please upload a custom thumbnail');
-  return null;
+export function getFileExtension(fileName: string): string | null {
+  const parts = fileName.split('.');
+  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : null;
+}
+
+/**
+ * Check if we can auto-generate a thumbnail for this file type
+ * Returns true for PDFs and Office documents
+ */
+export function canGenerateThumbnail(file: File): boolean {
+  return isDocumentFile(file);
 }
