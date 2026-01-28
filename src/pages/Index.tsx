@@ -46,7 +46,7 @@ const Index = () => {
   } = useInventoryDB();
   
   const { locations } = useLocations();
-  const { profile } = useAuth();
+  const { profile, canCheckInOut } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -199,13 +199,15 @@ const Index = () => {
               <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
             </div>
             <div className="flex items-center gap-2">
-              <ScanButton 
-                onScan={(mode) => {
-                  setScanMode(mode);
-                  setScannerOpen(true);
-                }}
-                isAdmin={isAdmin}
-              />
+              {canCheckInOut && (
+                <ScanButton 
+                  onScan={(mode) => {
+                    setScanMode(mode);
+                    setScannerOpen(true);
+                  }}
+                  isAdmin={isAdmin}
+                />
+              )}
               <UserMenu />
             </div>
           </div>
@@ -336,6 +338,7 @@ const Index = () => {
         onUpdate={updateItem}
         locations={locations}
         isAdmin={isAdmin}
+        canCheckInOut={canCheckInOut}
       />
 
       {/* QR Scanner */}
@@ -358,6 +361,7 @@ const Index = () => {
         onCheckOut={handleCheckOut}
         onMaintenance={handleMaintenance}
         isAdmin={isAdmin}
+        canCheckInOut={canCheckInOut}
       />
     </div>
   );

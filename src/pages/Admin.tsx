@@ -3,14 +3,15 @@ import { Link, Navigate } from 'react-router-dom';
 import { 
   Users, 
   Shield, 
-  ShieldOff, 
   ArrowLeft,
   Search,
   Loader2,
   Crown,
   MapPin,
   Trash2,
-  Map
+  Map,
+  Eye,
+  UserCheck
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -35,9 +36,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserManagement, UserWithRole } from '@/hooks/useUserManagement';
+import { useUserManagement, UserWithRole, AppRole } from '@/hooks/useUserManagement';
 import { useLocations, Location } from '@/hooks/useLocations';
 import { useInventoryDB } from '@/hooks/useInventoryDB';
 import { UserMenu } from '@/components/UserMenu';
@@ -48,7 +56,7 @@ import { format } from 'date-fns';
 
 const Admin = () => {
   const { isAdmin, isLoading: authLoading, user } = useAuth();
-  const { users, isLoading: usersLoading, promoteToAdmin, removeAdmin } = useUserManagement();
+  const { users, isLoading: usersLoading, setUserRole } = useUserManagement();
   const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
   const { items, isLoading: itemsLoading } = useInventoryDB();
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,12 +80,9 @@ const Admin = () => {
     loc.address.toLowerCase().includes(locationSearchQuery.toLowerCase())
   );
 
-  const handleToggleAdmin = async (userItem: UserWithRole) => {
-    if (userItem.isAdmin) {
-      await removeAdmin(userItem.user_id, userItem.full_name);
-    } else {
-      await promoteToAdmin(userItem.user_id, userItem.full_name);
-    }
+  const handleRoleChange = async (userItem: UserWithRole, newRole: string) => {
+    const role = newRole === 'none' ? null : newRole as AppRole;
+    await setUserRole(userItem.user_id, userItem.full_name, role);
   };
 
   const handleLocationClick = (location: Location, locationItems: typeof items) => {
@@ -155,7 +160,7 @@ const Admin = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-card border rounded-xl p-4">
                 <p className="text-sm text-muted-foreground">Total Users</p>
                 <p className="text-2xl font-bold">{users.length}</p>
@@ -163,13 +168,19 @@ const Admin = () => {
               <div className="bg-card border rounded-xl p-4">
                 <p className="text-sm text-muted-foreground">Administrators</p>
                 <p className="text-2xl font-bold text-accent">
-                  {users.filter(u => u.isAdmin).length}
+                  {users.filter(u => u.role === 'admin').length}
                 </p>
               </div>
-              <div className="bg-card border rounded-xl p-4 col-span-2 sm:col-span-1">
-                <p className="text-sm text-muted-foreground">Regular Users</p>
+              <div className="bg-card border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Users</p>
                 <p className="text-2xl font-bold">
-                  {users.filter(u => !u.isAdmin).length}
+                  {users.filter(u => u.role === 'user').length}
+                </p>
+              </div>
+              <div className="bg-card border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Members</p>
+                <p className="text-2xl font-bold">
+                  {users.filter(u => u.role === 'member').length}
                 </p>
               </div>
             </div>
@@ -231,14 +242,24 @@ const Admin = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {userItem.isAdmin ? (
+                            {userItem.role === 'admin' ? (
                               <Badge className="bg-accent text-accent-foreground">
                                 <Shield className="h-3 w-3 mr-1" />
                                 Admin
                               </Badge>
-                            ) : (
-                              <Badge variant="secondary">
+                            ) : userItem.role === 'user' ? (
+                              <Badge className="bg-primary text-primary-foreground">
+                                <UserCheck className="h-3 w-3 mr-1" />
                                 User
+                              </Badge>
+                            ) : userItem.role === 'member' ? (
+                              <Badge variant="secondary">
+                                <Eye className="h-3 w-3 mr-1" />
+                                Member
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                No Role
                               </Badge>
                             )}
                           </TableCell>
@@ -248,56 +269,21 @@ const Admin = () => {
                           <TableCell className="text-right">
                             {isCurrentUser ? (
                               <span className="text-sm text-muted-foreground">—</span>
-                            ) : userItem.isAdmin ? (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm" className="gap-1.5">
-                                    <ShieldOff className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">Remove Admin</span>
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remove Admin Role</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to remove admin privileges from{' '}
-                                      <strong>{userItem.full_name}</strong>? They will no longer be able
-                                      to add, edit, or delete inventory items.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleToggleAdmin(userItem)}>
-                                      Remove Admin
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
                             ) : (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm" className="gap-1.5">
-                                    <Shield className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">Make Admin</span>
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Promote to Admin</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to give admin privileges to{' '}
-                                      <strong>{userItem.full_name}</strong>? They will be able to add,
-                                      edit, and delete inventory items.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleToggleAdmin(userItem)}>
-                                      Make Admin
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <Select
+                                value={userItem.role || 'none'}
+                                onValueChange={(value) => handleRoleChange(userItem, value)}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background">
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="user">User</SelectItem>
+                                  <SelectItem value="member">Member</SelectItem>
+                                  <SelectItem value="none">No Role</SelectItem>
+                                </SelectContent>
+                              </Select>
                             )}
                           </TableCell>
                         </TableRow>

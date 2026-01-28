@@ -25,6 +25,7 @@ interface ScanResultDialogProps {
   onCheckOut: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
   onMaintenance?: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
   isAdmin?: boolean;
+  canCheckInOut?: boolean;
 }
 
 export function ScanResultDialog({
@@ -38,6 +39,7 @@ export function ScanResultDialog({
   onCheckOut,
   onMaintenance,
   isAdmin = false,
+  canCheckInOut = true,
 }: ScanResultDialogProps) {
   const [locationId, setLocationId] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
@@ -145,6 +147,15 @@ export function ScanResultDialog({
 
   // Determine what actions are available based on scan mode and item status
   const renderActions = () => {
+    // If user cannot check in/out (member role), show read-only info
+    if (!canCheckInOut) {
+      return (
+        <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-lg text-muted-foreground">
+          <p className="text-sm">You can view items but cannot check them in or out.</p>
+        </div>
+      );
+    }
+
     // If item is already in maintenance
     if (item.status === 'maintenance') {
       if (isAdmin) {
