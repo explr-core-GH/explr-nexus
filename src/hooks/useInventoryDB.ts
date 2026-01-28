@@ -11,6 +11,7 @@ export interface InventoryItem {
   status: 'available' | 'checked-out' | 'maintenance';
   qr_code: string;
   location: string;
+  location_id: string | null;
   image_url: string | null;
   checked_out_by: string | null;
   checked_out_at: string | null;
@@ -95,7 +96,7 @@ export function useInventoryDB() {
     return code;
   };
 
-  const addItem = async (item: { name: string; description: string; category: string; location: string; image_url?: string }) => {
+  const addItem = async (item: { name: string; description: string; category: string; location: string; location_id?: string; image_url?: string }) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -106,7 +107,7 @@ export function useInventoryDB() {
     }
 
     try {
-      const newItem = {
+      const newItem: Record<string, unknown> = {
         name: item.name,
         description: item.description,
         category: item.category,
@@ -115,10 +116,14 @@ export function useInventoryDB() {
         qr_code: generateQRCode(),
         status: 'available',
       };
+      
+      if (item.location_id) {
+        newItem.location_id = item.location_id;
+      }
 
       const { data, error } = await supabase
         .from('inventory_items')
-        .insert(newItem)
+        .insert(newItem as any)
         .select()
         .single();
 
@@ -207,7 +212,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string, newLocation?: string) => {
+  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[]) => {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
@@ -227,8 +232,12 @@ export function useInventoryDB() {
         checked_out_by: user.id,
         checked_out_at: new Date().toISOString(),
       };
-      if (newLocation) {
-        updateData.location = newLocation;
+      if (newLocationId && locations) {
+        const newLocation = locations.find(l => l.id === newLocationId);
+        if (newLocation) {
+          updateData.location = newLocation.name;
+          updateData.location_id = newLocationId;
+        }
       }
       
       const { error: updateError } = await supabase
@@ -252,10 +261,11 @@ export function useInventoryDB() {
       if (logError) throw logError;
 
       // Update local state
+      const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation }) }
+            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );
@@ -273,7 +283,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkIn = async (itemId: string, userName: string, newLocation?: string) => {
+  const checkIn = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[]) => {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
@@ -315,8 +325,12 @@ export function useInventoryDB() {
         checked_out_by: null,
         checked_out_at: null,
       };
-      if (newLocation) {
-        updateData.location = newLocation;
+      if (newLocationId && locations) {
+        const newLocation = locations.find(l => l.id === newLocationId);
+        if (newLocation) {
+          updateData.location = newLocation.name;
+          updateData.location_id = newLocationId;
+        }
       }
       
       const { error: updateError } = await supabase
@@ -340,10 +354,11 @@ export function useInventoryDB() {
       if (logError) throw logError;
 
       // Update local state
+      const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'available' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation }) }
+            ? { ...i, status: 'available' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );
@@ -361,7 +376,7 @@ export function useInventoryDB() {
     }
   };
 
-  const setMaintenance = async (itemId: string, newLocation?: string) => {
+  const setMaintenance = async (itemId: string, newLocationId?: string, locations?: { id: string; name: string }[]) => {
     if (!user || !isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -380,8 +395,12 @@ export function useInventoryDB() {
         checked_out_by: null,
         checked_out_at: null,
       };
-      if (newLocation) {
-        updateData.location = newLocation;
+      if (newLocationId && locations) {
+        const newLocation = locations.find(l => l.id === newLocationId);
+        if (newLocation) {
+          updateData.location = newLocation.name;
+          updateData.location_id = newLocationId;
+        }
       }
       
       const { error } = await supabase
@@ -391,10 +410,11 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
+      const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'maintenance' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation }) }
+            ? { ...i, status: 'maintenance' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );

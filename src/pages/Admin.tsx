@@ -7,7 +7,10 @@ import {
   ArrowLeft,
   Search,
   Loader2,
-  Crown
+  Crown,
+  MapPin,
+  Trash2,
+  Map
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -32,15 +35,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserManagement, UserWithRole } from '@/hooks/useUserManagement';
+import { useLocations, Location } from '@/hooks/useLocations';
+import { useInventoryDB } from '@/hooks/useInventoryDB';
 import { UserMenu } from '@/components/UserMenu';
+import { AddLocationDialog } from '@/components/AddLocationDialog';
+import { LocationsMap } from '@/components/LocationsMap';
+import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { format } from 'date-fns';
 
 const Admin = () => {
   const { isAdmin, isLoading: authLoading, user } = useAuth();
-  const { users, isLoading, promoteToAdmin, removeAdmin } = useUserManagement();
+  const { users, isLoading: usersLoading, promoteToAdmin, removeAdmin } = useUserManagement();
+  const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
+  const { items, isLoading: itemsLoading } = useInventoryDB();
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationSearchQuery, setLocationSearchQuery] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [selectedLocationItems, setSelectedLocationItems] = useState<typeof items>([]);
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
 
   // Redirect non-admins
   if (!authLoading && !isAdmin) {
@@ -52,6 +67,11 @@ const Admin = () => {
     (u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
+  const filteredLocations = locations.filter(loc => 
+    loc.name.toLowerCase().includes(locationSearchQuery.toLowerCase()) ||
+    loc.address.toLowerCase().includes(locationSearchQuery.toLowerCase())
+  );
+
   const handleToggleAdmin = async (userItem: UserWithRole) => {
     if (userItem.isAdmin) {
       await removeAdmin(userItem.user_id, userItem.full_name);
@@ -60,7 +80,15 @@ const Admin = () => {
     }
   };
 
-  if (authLoading || isLoading) {
+  const handleLocationClick = (location: Location, locationItems: typeof items) => {
+    setSelectedLocation(location);
+    setSelectedLocationItems(locationItems);
+    setLocationDialogOpen(true);
+  };
+
+  const isLoading = authLoading || usersLoading || locationsLoading || itemsLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -99,173 +127,361 @@ const Admin = () => {
       </header>
 
       <main className="container py-6 space-y-6">
-        {/* Page Title */}
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-accent/10">
-            <Users className="h-6 w-6 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">User Management</h2>
-            <p className="text-muted-foreground">
-              Manage user roles and permissions
-            </p>
-          </div>
-        </div>
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="locations" className="gap-2">
+              <MapPin className="h-4 w-4" />
+              Locations
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div className="bg-card border rounded-xl p-4">
-            <p className="text-sm text-muted-foreground">Total Users</p>
-            <p className="text-2xl font-bold">{users.length}</p>
-          </div>
-          <div className="bg-card border rounded-xl p-4">
-            <p className="text-sm text-muted-foreground">Administrators</p>
-            <p className="text-2xl font-bold text-accent">
-              {users.filter(u => u.isAdmin).length}
-            </p>
-          </div>
-          <div className="bg-card border rounded-xl p-4 col-span-2 sm:col-span-1">
-            <p className="text-sm text-muted-foreground">Regular Users</p>
-            <p className="text-2xl font-bold">
-              {users.filter(u => !u.isAdmin).length}
-            </p>
-          </div>
-        </div>
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6 mt-6">
+            {/* Page Title */}
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-accent/10">
+                <Users className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">User Management</h2>
+                <p className="text-muted-foreground">
+                  Manage user roles and permissions
+                </p>
+              </div>
+            </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="bg-card border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Total Users</p>
+                <p className="text-2xl font-bold">{users.length}</p>
+              </div>
+              <div className="bg-card border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Administrators</p>
+                <p className="text-2xl font-bold text-accent">
+                  {users.filter(u => u.isAdmin).length}
+                </p>
+              </div>
+              <div className="bg-card border rounded-xl p-4 col-span-2 sm:col-span-1">
+                <p className="text-sm text-muted-foreground">Regular Users</p>
+                <p className="text-2xl font-bold">
+                  {users.filter(u => !u.isAdmin).length}
+                </p>
+              </div>
+            </div>
 
-        {/* Users Table */}
-        <div className="border rounded-xl overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="hidden sm:table-cell">Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {users.length === 0 ? 'No users found' : 'No matching users'}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredUsers.map((userItem) => {
-                  const isCurrentUser = userItem.user_id === user?.id;
-                  return (
-                    <TableRow key={userItem.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
-                            {userItem.isAdmin ? (
-                              <Crown className="h-4 w-4 text-accent" />
-                            ) : (
-                              <Users className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium flex items-center gap-2">
-                              {userItem.full_name}
-                              {isCurrentUser && (
-                                <Badge variant="outline" className="text-xs">You</Badge>
-                              )}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {userItem.email || 'No email'}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {userItem.isAdmin ? (
-                          <Badge className="bg-accent text-accent-foreground">
-                            <Shield className="h-3 w-3 mr-1" />
-                            Admin
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">
-                            User
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">
-                        {format(new Date(userItem.created_at), 'MMM d, yyyy')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {isCurrentUser ? (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        ) : userItem.isAdmin ? (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="gap-1.5">
-                                <ShieldOff className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Remove Admin</span>
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Remove Admin Role</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to remove admin privileges from{' '}
-                                  <strong>{userItem.full_name}</strong>? They will no longer be able
-                                  to add, edit, or delete inventory items.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleToggleAdmin(userItem)}>
-                                  Remove Admin
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        ) : (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="gap-1.5">
-                                <Shield className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Make Admin</span>
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Promote to Admin</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to give admin privileges to{' '}
-                                  <strong>{userItem.full_name}</strong>? They will be able to add,
-                                  edit, and delete inventory items.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleToggleAdmin(userItem)}>
-                                  Make Admin
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Users Table */}
+            <div className="border rounded-xl overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="hidden sm:table-cell">Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        {users.length === 0 ? 'No users found' : 'No matching users'}
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  ) : (
+                    filteredUsers.map((userItem) => {
+                      const isCurrentUser = userItem.user_id === user?.id;
+                      return (
+                        <TableRow key={userItem.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
+                                {userItem.isAdmin ? (
+                                  <Crown className="h-4 w-4 text-accent" />
+                                ) : (
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium flex items-center gap-2">
+                                  {userItem.full_name}
+                                  {isCurrentUser && (
+                                    <Badge variant="outline" className="text-xs">You</Badge>
+                                  )}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {userItem.email || 'No email'}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {userItem.isAdmin ? (
+                              <Badge className="bg-accent text-accent-foreground">
+                                <Shield className="h-3 w-3 mr-1" />
+                                Admin
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                User
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground">
+                            {format(new Date(userItem.created_at), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isCurrentUser ? (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            ) : userItem.isAdmin ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="gap-1.5">
+                                    <ShieldOff className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Remove Admin</span>
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove Admin Role</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to remove admin privileges from{' '}
+                                      <strong>{userItem.full_name}</strong>? They will no longer be able
+                                      to add, edit, or delete inventory items.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleToggleAdmin(userItem)}>
+                                      Remove Admin
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="gap-1.5">
+                                    <Shield className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Make Admin</span>
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Promote to Admin</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to give admin privileges to{' '}
+                                      <strong>{userItem.full_name}</strong>? They will be able to add,
+                                      edit, and delete inventory items.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleToggleAdmin(userItem)}>
+                                      Make Admin
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* Locations Tab */}
+          <TabsContent value="locations" className="space-y-6 mt-6">
+            {/* Page Title */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-accent/10">
+                  <MapPin className="h-6 w-6 text-accent" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Location Management</h2>
+                  <p className="text-muted-foreground">
+                    Manage equipment locations and view on map
+                  </p>
+                </div>
+              </div>
+              <AddLocationDialog onAdd={addLocation} />
+            </div>
+
+            {/* Map Section */}
+            <div className="bg-card border rounded-xl p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-semibold">Equipment Map</h3>
+              </div>
+              <LocationsMap 
+                locations={locations} 
+                items={items}
+                onLocationClick={handleLocationClick}
+              />
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(142, 71%, 45%)' }} />
+                  <span>All Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(0, 84%, 60%)' }} />
+                  <span>All Checked Out</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(38, 92%, 50%)' }} />
+                  <span>All Maintenance</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(221, 83%, 53%)' }} />
+                  <span>Mixed Status</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="bg-card border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Total Locations</p>
+                <p className="text-2xl font-bold">{locations.length}</p>
+              </div>
+              <div className="bg-card border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">With Coordinates</p>
+                <p className="text-2xl font-bold text-accent">
+                  {locations.filter(l => l.latitude && l.longitude).length}
+                </p>
+              </div>
+              <div className="bg-card border rounded-xl p-4 col-span-2 sm:col-span-1">
+                <p className="text-sm text-muted-foreground">Items with Location</p>
+                <p className="text-2xl font-bold">
+                  {items.filter(i => i.location_id).length}
+                </p>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search locations..."
+                value={locationSearchQuery}
+                onChange={(e) => setLocationSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Locations Table */}
+            <div className="border rounded-xl overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Location</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead className="hidden sm:table-cell">Items</TableHead>
+                    <TableHead className="hidden md:table-cell">Coordinates</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLocations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        {locations.length === 0 ? 'No locations added yet' : 'No matching locations'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLocations.map((location) => {
+                      const itemCount = items.filter(i => i.location_id === location.id).length;
+                      return (
+                        <TableRow key={location.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
+                                <MapPin className="h-4 w-4 text-accent" />
+                              </div>
+                              <p className="font-medium">{location.name}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                            {location.address}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <Badge variant="secondary">{itemCount} items</Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                            {location.latitude && location.longitude ? (
+                              <span className="font-mono">
+                                {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                              </span>
+                            ) : (
+                              <span className="text-destructive">Not geocoded</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Location</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete{' '}
+                                    <strong>{location.name}</strong>? Items at this location will have their location cleared.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => deleteLocation(location.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* Location Items Dialog */}
+      <LocationItemsDialog
+        location={selectedLocation}
+        items={selectedLocationItems}
+        open={locationDialogOpen}
+        onOpenChange={setLocationDialogOpen}
+      />
     </div>
   );
 };
