@@ -23,6 +23,7 @@ import {
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { NewResource } from '@/hooks/useResources';
 import { getVideoThumbnailUrl, isVideoUrl } from '@/lib/videoThumbnails';
+import { generatePdfThumbnailFile, isPdfFile } from '@/lib/documentThumbnails';
 
 interface AddResourceDialogProps {
   onAdd: (resource: NewResource) => Promise<any>;
@@ -40,6 +41,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   const [selectedThumbnail, setSelectedThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [autoThumbnailUrl, setAutoThumbnailUrl] = useState<string | null>(null);
+  const [autoThumbnailFile, setAutoThumbnailFile] = useState<File | null>(null);
   const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,21 +56,50 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
           const thumbnailUrl = await getVideoThumbnailUrl(url);
           if (thumbnailUrl) {
             setAutoThumbnailUrl(thumbnailUrl);
+            setAutoThumbnailFile(null);
           }
         } catch (error) {
           console.error('Error fetching video thumbnail:', error);
         } finally {
           setIsFetchingThumbnail(false);
         }
-      } else {
+      } else if (!selectedFile) {
         setAutoThumbnailUrl(null);
+        setAutoThumbnailFile(null);
       }
     };
 
     // Debounce the fetch
     const timeoutId = setTimeout(fetchThumbnail, 500);
     return () => clearTimeout(timeoutId);
-  }, [url, type]);
+  }, [url, type, selectedFile]);
+
+  // Auto-generate PDF thumbnail when file is selected
+  useEffect(() => {
+    const generateThumbnail = async () => {
+      if (selectedFile && isPdfFile(selectedFile)) {
+        setIsFetchingThumbnail(true);
+        try {
+          const thumbnailFile = await generatePdfThumbnailFile(selectedFile);
+          if (thumbnailFile) {
+            setAutoThumbnailFile(thumbnailFile);
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setAutoThumbnailUrl(reader.result as string);
+            };
+            reader.readAsDataURL(thumbnailFile);
+          }
+        } catch (error) {
+          console.error('Error generating PDF thumbnail:', error);
+        } finally {
+          setIsFetchingThumbnail(false);
+        }
+      }
+    };
+
+    generateThumbnail();
+  }, [selectedFile]);
 
   const resetForm = () => {
     setTitle('');
@@ -79,6 +110,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     setSelectedThumbnail(null);
     setThumbnailPreview(null);
     setAutoThumbnailUrl(null);
+    setAutoThumbnailFile(null);
     setTags([]);
   };
 
@@ -101,15 +133,19 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
         }
       }
       
-      // Upload custom thumbnail if selected, otherwise use auto-detected URL
+      // Determine which thumbnail to upload
+      // Priority: custom uploaded > auto-generated file (PDF) > auto URL (video)
       if (selectedThumbnail) {
         thumbnailPath = await uploadFile(selectedThumbnail);
+      } else if (autoThumbnailFile) {
+        // Upload the auto-generated PDF thumbnail
+        thumbnailPath = await uploadFile(autoThumbnailFile);
       }
       
       // For the thumbnail_url, we'll store either:
-      // 1. The uploaded file path (if custom thumbnail uploaded)
+      // 1. The uploaded file path (if custom or PDF auto-thumbnail uploaded)
       // 2. The auto-detected video thumbnail URL (if available and no custom)
-      const finalThumbnailUrl = thumbnailPath || (autoThumbnailUrl && !selectedThumbnail ? autoThumbnailUrl : undefined);
+      const finalThumbnailUrl = thumbnailPath || (autoThumbnailUrl && !autoThumbnailFile ? autoThumbnailUrl : undefined);
       
       await onAdd({
         title: title.trim(),
@@ -132,6 +168,9 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      // Clear any existing auto-thumbnail to regenerate
+      setAutoThumbnailUrl(null);
+      setAutoThumbnailFile(null);
     }
   };
 
@@ -162,6 +201,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   // Determine which thumbnail to show
   const displayThumbnail = thumbnailPreview || autoThumbnailUrl;
   const isAutoThumbnail = !thumbnailPreview && autoThumbnailUrl;
+  const autoThumbnailSource = autoThumbnailFile ? 'PDF' : (isVideoUrl(url) ? 'Video' : null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -261,65 +301,6 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
               </div>
             )}
 
-            {/* Preview Image */}
-            <div className="space-y-2">
-              <Label>Preview Image</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                {type === 'video' 
-                  ? 'Auto-detected from video URL, or upload a custom image' 
-                  : 'Add a thumbnail image that members will see'}
-              </p>
-              <div className="flex items-start gap-3">
-                <input
-                  ref={thumbnailInputRef}
-                  type="file"
-                  onChange={handleThumbnailChange}
-                  className="hidden"
-                  accept="image/*"
-                />
-                
-                {isFetchingThumbnail ? (
-                  <div className="w-24 h-24 rounded-lg border bg-muted flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : displayThumbnail ? (
-                  <div className="relative">
-                    <img 
-                      src={displayThumbnail} 
-                      alt="Thumbnail preview" 
-                      className="w-24 h-24 object-cover rounded-lg border"
-                    />
-                    {isAutoThumbnail && (
-                      <span className="absolute bottom-1 left-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded">
-                        Auto
-                      </span>
-                    )}
-                    {!isAutoThumbnail && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6"
-                        onClick={removeThumbnail}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                ) : null}
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => thumbnailInputRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Image className="h-4 w-4" />
-                  {displayThumbnail ? 'Change Image' : 'Upload Image'}
-                </Button>
-              </div>
-            </div>
-
             {/* File Upload (for manuals and curriculum) */}
             {needsFile && (
               <div className="space-y-2">
@@ -349,13 +330,22 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 shrink-0"
-                        onClick={() => setSelectedFile(null)}
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setAutoThumbnailUrl(null);
+                          setAutoThumbnailFile(null);
+                        }}
                       >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
                   )}
                 </div>
+                {isPdfFile(selectedFile!) && (
+                  <p className="text-xs text-muted-foreground">
+                    ✓ PDF preview will be generated automatically
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Or provide a URL below for externally hosted files
                 </p>
@@ -368,6 +358,67 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                 />
               </div>
             )}
+
+            {/* Preview Image */}
+            <div className="space-y-2">
+              <Label>Preview Image</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                {type === 'video' 
+                  ? 'Auto-detected from video URL, or upload a custom image'
+                  : needsFile
+                    ? 'Auto-generated from PDF, or upload a custom image'
+                    : 'Add a thumbnail image that members will see'}
+              </p>
+              <div className="flex items-start gap-3">
+                <input
+                  ref={thumbnailInputRef}
+                  type="file"
+                  onChange={handleThumbnailChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                
+                {isFetchingThumbnail ? (
+                  <div className="w-24 h-24 rounded-lg border bg-muted flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : displayThumbnail ? (
+                  <div className="relative">
+                    <img 
+                      src={displayThumbnail} 
+                      alt="Thumbnail preview" 
+                      className="w-24 h-24 object-cover rounded-lg border"
+                    />
+                    {isAutoThumbnail && autoThumbnailSource && (
+                      <span className="absolute bottom-1 left-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded">
+                        {autoThumbnailSource}
+                      </span>
+                    )}
+                    {!isAutoThumbnail && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={removeThumbnail}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Image className="h-4 w-4" />
+                  {displayThumbnail ? 'Change Image' : 'Upload Image'}
+                </Button>
+              </div>
+            </div>
 
             {/* Tags */}
             <div className="space-y-2">
