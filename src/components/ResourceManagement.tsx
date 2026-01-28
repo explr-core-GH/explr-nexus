@@ -155,7 +155,10 @@ export function ResourceManagement() {
               filteredResources.map((resource) => {
                 const Icon = typeIcons[resource.type];
                 const isFile = !!resource.file_path;
-                const thumbnailUrl = resource.thumbnail_url ? getFileUrl(resource.thumbnail_url) : null;
+                // Handle both external URLs (YouTube/Vimeo) and uploaded file paths
+                const thumbnailUrl = resource.thumbnail_url 
+                  ? (resource.thumbnail_url.startsWith('http') ? resource.thumbnail_url : getFileUrl(resource.thumbnail_url))
+                  : null;
                 
                 return (
                   <TableRow key={resource.id}>
