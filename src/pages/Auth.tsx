@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Briefcase, MapPin } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Briefcase, MapPin, KeyRound } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ interface FormErrors {
   organizationName?: string;
   position?: string;
   organizationAddress?: string;
+  accessCode?: string;
 }
 
 const Auth = () => {
@@ -41,6 +42,7 @@ const Auth = () => {
   const [organizationName, setOrganizationName] = useState('');
   const [position, setPosition] = useState('');
   const [organizationAddress, setOrganizationAddress] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const { toast } = useToast();
@@ -129,11 +131,41 @@ const Auth = () => {
           if (profileError) {
             console.error('Error updating profile:', profileError);
           }
+
+          // Call edge function to assign role based on access code
+          if (accessCode.trim()) {
+            try {
+              const { data: roleData, error: roleError } = await supabase.functions.invoke('assign-role', {
+                body: { userId: data.user.id, accessCode: accessCode.trim() }
+              });
+
+              if (roleError) {
+                console.error('Error assigning role:', roleError);
+              } else if (roleData?.error) {
+                toast({
+                  title: 'Invalid Access Code',
+                  description: 'The access code you entered is not valid. Your account will require admin approval.',
+                  variant: 'destructive',
+                });
+              } else if (roleData?.role) {
+                toast({
+                  title: 'Account created!',
+                  description: `Welcome! You've been granted ${roleData.role} access.`,
+                });
+                navigate('/');
+                return;
+              }
+            } catch (fnError) {
+              console.error('Error calling assign-role function:', fnError);
+            }
+          }
         }
         
         toast({
           title: 'Account created!',
-          description: 'Your account is pending admin approval. You can log in but will have limited access until approved.',
+          description: accessCode.trim() 
+            ? 'Your account is pending admin approval.' 
+            : 'Your account is pending admin approval. You can log in but will have limited access until approved.',
         });
         navigate('/');
       }
@@ -253,6 +285,27 @@ const Auth = () => {
                     </div>
                     {errors.organizationAddress && (
                       <p className="text-sm text-destructive">{errors.organizationAddress}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="accessCode">Access Code (Optional)</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="accessCode"
+                        type="text"
+                        placeholder="Enter code if provided"
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      If you were given an access code, enter it here for immediate access
+                    </p>
+                    {errors.accessCode && (
+                      <p className="text-sm text-destructive">{errors.accessCode}</p>
                     )}
                   </div>
                 </>
