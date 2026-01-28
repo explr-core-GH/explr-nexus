@@ -22,6 +22,7 @@ import {
 import { ImageUpload } from '@/components/ImageUpload';
 import { LocationSelect } from '@/components/LocationSelect';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
+import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { Location } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,6 +35,7 @@ interface EditItemDialogProps {
     location: string;
     locationId?: string;
     imageUrl?: string;
+    tags?: string[];
     status?: string;
     checkedOutBy?: string;
   };
@@ -46,6 +48,7 @@ interface EditItemDialogProps {
     location: string;
     location_id: string | null;
     image_url: string | null;
+    tags?: string[];
     checked_out_by?: string | null;
   }) => Promise<boolean>;
   trigger?: React.ReactNode;
@@ -69,6 +72,7 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
   const [location, setLocation] = useState(item.location);
   const [locationId, setLocationId] = useState<string | undefined>(item.locationId);
   const [imageUrl, setImageUrl] = useState<string | null>(item.imageUrl || null);
+  const [tags, setTags] = useState<string[]>(item.tags || []);
   const [assignedToName, setAssignedToName] = useState<string>(item.checkedOutBy || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -81,6 +85,7 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
     setLocation(item.location);
     setLocationId(item.locationId);
     setImageUrl(item.imageUrl || null);
+    setTags(item.tags || []);
     setAssignedToName(item.checkedOutBy || '');
   }, [item]);
 
@@ -109,6 +114,7 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
         location,
         location_id: locationId || null,
         image_url: imageUrl,
+        tags,
       };
       
       // Only include checked_out_by if item is checked out
@@ -220,6 +226,14 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
               />
             </div>
           )}
+          {/* Visibility Tags */}
+          <div className="space-y-2">
+            <Label>Visibility Tags</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Select which member groups can see this item
+            </p>
+            <TagsCheckboxGroup selectedTags={tags} onTagsChange={setTags} />
+          </div>
           <div className="flex gap-3 pt-4">
             <Button 
               type="button" 

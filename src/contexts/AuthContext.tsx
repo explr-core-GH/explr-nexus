@@ -7,6 +7,7 @@ interface Profile {
   user_id: string;
   full_name: string;
   email: string | null;
+  tags: string[];
 }
 
 type AppRole = 'admin' | 'user' | 'member';
@@ -18,6 +19,7 @@ interface AuthContextType {
   isAdmin: boolean;
   canCheckInOut: boolean; // true for admin and user, false for member
   userRole: AppRole | null;
+  userTags: string[]; // visibility tags for the current user
   isLoading: boolean;
   signOut: () => Promise<void>;
 }
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [canCheckInOut, setCanCheckInOut] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [userTags, setUserTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAdmin(false);
           setCanCheckInOut(false);
           setUserRole(null);
+          setUserTags([]);
           setIsLoading(false);
         }
       }
@@ -82,7 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError) {
         console.error('Error fetching profile:', profileError);
       } else {
-        setProfile(profileData);
+        // Handle tags - ensure it's always an array
+        const tags: string[] = Array.isArray(profileData?.tags) ? profileData.tags : [];
+        setProfile(profileData ? { ...profileData, tags } : null);
+        setUserTags(tags);
       }
 
       // Fetch role - check user roles
@@ -128,10 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setCanCheckInOut(false);
     setUserRole(null);
+    setUserTags([]);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, userTags, isLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
