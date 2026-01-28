@@ -58,7 +58,7 @@ import { format } from 'date-fns';
 
 const Admin = () => {
   const { isAdmin, isLoading: authLoading, user } = useAuth();
-  const { users, isLoading: usersLoading, setUserRole, updateUserTags } = useUserManagement();
+  const { users, isLoading: usersLoading, setUserRole, updateUserTags, deleteUser } = useUserManagement();
   const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
   const { items, isLoading: itemsLoading } = useInventoryDB();
   const [searchQuery, setSearchQuery] = useState('');
@@ -300,20 +300,47 @@ const Admin = () => {
                               {isCurrentUser ? (
                                 <span className="text-sm text-muted-foreground">—</span>
                               ) : (
-                              <Select
-                                value={userItem.role || 'none'}
-                                onValueChange={(value) => handleRoleChange(userItem, value)}
-                              >
-                                <SelectTrigger className="w-[130px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-background">
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="user">User</SelectItem>
-                                  <SelectItem value="member">Member</SelectItem>
-                                  <SelectItem value="none">No Role</SelectItem>
-                                </SelectContent>
-                              </Select>
+                                <>
+                                  <Select
+                                    value={userItem.role || 'none'}
+                                    onValueChange={(value) => handleRoleChange(userItem, value)}
+                                  >
+                                    <SelectTrigger className="w-[130px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-background">
+                                      <SelectItem value="admin">Admin</SelectItem>
+                                      <SelectItem value="user">User</SelectItem>
+                                      <SelectItem value="member">Member</SelectItem>
+                                      <SelectItem value="none">No Role</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete <span className="font-semibold">{userItem.full_name}</span>? 
+                                          This will permanently remove their account, profile, and all associated data. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteUser(userItem.user_id, userItem.full_name)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          Delete User
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
                               )}
                             </div>
                           </TableCell>
