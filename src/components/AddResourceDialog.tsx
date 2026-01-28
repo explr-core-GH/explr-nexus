@@ -23,7 +23,7 @@ import {
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { NewResource } from '@/hooks/useResources';
 import { getVideoThumbnailUrl, isVideoUrl } from '@/lib/videoThumbnails';
-import { generatePdfThumbnailFile, isPdfFile } from '@/lib/documentThumbnails';
+import { isPdfFile } from '@/lib/documentThumbnails';
 import { fetchOpenGraphData, isRegularWebsite } from '@/lib/openGraph';
 
 interface AddResourceDialogProps {
@@ -111,33 +111,8 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     return () => clearTimeout(timeoutId);
   }, [url, type]);
 
-  // Auto-generate PDF thumbnail when file is selected
-  useEffect(() => {
-    const generateThumbnail = async () => {
-      if (selectedFile && isPdfFile(selectedFile)) {
-        setIsFetchingThumbnail(true);
-        try {
-          const thumbnailFile = await generatePdfThumbnailFile(selectedFile);
-          if (thumbnailFile) {
-            setAutoThumbnailFile(thumbnailFile);
-            setAutoThumbnailSource('PDF');
-            // Create preview URL
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              setAutoThumbnailUrl(reader.result as string);
-            };
-            reader.readAsDataURL(thumbnailFile);
-          }
-        } catch (error) {
-          console.error('Error generating PDF thumbnail:', error);
-        } finally {
-          setIsFetchingThumbnail(false);
-        }
-      }
-    };
-
-    generateThumbnail();
-  }, [selectedFile]);
+  // Note: PDF thumbnail auto-generation disabled due to build compatibility
+  // Users should upload custom thumbnails for PDFs
 
   const resetForm = () => {
     setTitle('');
@@ -383,7 +358,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                 </div>
                 {selectedFile && isPdfFile(selectedFile) && (
                   <p className="text-xs text-muted-foreground">
-                    ✓ PDF preview will be generated automatically
+                    💡 Upload a preview image below to show members what this PDF contains
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
