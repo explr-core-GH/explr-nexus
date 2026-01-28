@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, XCircle, ArrowLeftRight, AlertTriangle, LogIn, LogOut, Wrench, MapPin } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, LogIn, LogOut, Wrench, MapPin, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { LocationSelect } from '@/components/LocationSelect';
+import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { Location } from '@/hooks/useLocations';
 import { InventoryItem } from '@/types/inventory';
 import { ScanMode } from '@/components/ScanButton';
@@ -20,10 +21,11 @@ interface ScanResultDialogProps {
   open: boolean;
   scanMode: ScanMode;
   locations: Location[];
+  users?: SelectableUser[];
   onOpenChange: (open: boolean) => void;
-  onCheckIn: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
-  onCheckOut: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
-  onMaintenance?: (itemId: string, locationId?: string) => Promise<boolean> | boolean;
+  onCheckIn: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
+  onMaintenance?: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
   isAdmin?: boolean;
   canCheckInOut?: boolean;
 }
@@ -34,6 +36,7 @@ export function ScanResultDialog({
   open,
   scanMode,
   locations,
+  users = [],
   onOpenChange,
   onCheckIn,
   onCheckOut,
@@ -42,12 +45,14 @@ export function ScanResultDialog({
   canCheckInOut = true,
 }: ScanResultDialogProps) {
   const [locationId, setLocationId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserName, setSelectedUserName] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance' | 'return-from-maintenance') => {
-    if (!item) return;
+    if (!item || !selectedUserName) return;
     
     setIsLoading(true);
     
@@ -55,11 +60,11 @@ export function ScanResultDialog({
       let success = false;
       const newLocationId = locationId || undefined;
       if (action === 'check-out') {
-        success = await onCheckOut(item.id, newLocationId);
+        success = await onCheckOut(item.id, selectedUserName, newLocationId);
       } else if (action === 'check-in' || action === 'return-from-maintenance') {
-        success = await onCheckIn(item.id, newLocationId);
+        success = await onCheckIn(item.id, selectedUserName, newLocationId);
       } else if (action === 'maintenance' && onMaintenance) {
-        success = await onMaintenance(item.id, newLocationId);
+        success = await onMaintenance(item.id, selectedUserName, newLocationId);
       }
       
       if (success) {
@@ -71,8 +76,15 @@ export function ScanResultDialog({
     }
   };
 
+  const handleUserSelect = (userId: string, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
+  };
+
   const handleClose = () => {
     setLocationId('');
+    setSelectedUserId('');
+    setSelectedUserName('');
     setActionComplete(false);
     setLastAction(null);
     onOpenChange(false);
@@ -167,7 +179,7 @@ export function ScanResultDialog({
             </div>
             <Button 
               onClick={() => handleAction('return-from-maintenance')} 
-              disabled={isLoading}
+              disabled={isLoading || !selectedUserName}
               variant="outline"
               className="w-full gap-2"
             >
@@ -198,7 +210,7 @@ export function ScanResultDialog({
       return (
         <Button 
           onClick={() => handleAction('check-in')} 
-          disabled={isLoading}
+          disabled={isLoading || !selectedUserName}
           className="w-full gap-2 bg-available hover:bg-available/90"
         >
           <LogIn className="h-4 w-4" />
@@ -219,7 +231,7 @@ export function ScanResultDialog({
       return (
         <Button 
           onClick={() => handleAction('check-out')} 
-          disabled={isLoading}
+          disabled={isLoading || !selectedUserName}
           className="w-full gap-2 bg-checked-out hover:bg-checked-out/90"
         >
           <LogOut className="h-4 w-4" />
@@ -232,7 +244,7 @@ export function ScanResultDialog({
       return (
         <Button 
           onClick={() => handleAction('maintenance')} 
-          disabled={isLoading}
+          disabled={isLoading || !selectedUserName}
           className="w-full gap-2 bg-maintenance hover:bg-maintenance/90"
         >
           <Wrench className="h-4 w-4" />
@@ -247,7 +259,7 @@ export function ScanResultDialog({
         {item.status === 'available' && (
           <Button 
             onClick={() => handleAction('check-out')} 
-            disabled={isLoading}
+            disabled={isLoading || !selectedUserName}
             className="w-full gap-2"
           >
             <LogOut className="h-4 w-4" />
@@ -257,7 +269,7 @@ export function ScanResultDialog({
         {item.status === 'checked-out' && (
           <Button 
             onClick={() => handleAction('check-in')} 
-            disabled={isLoading}
+            disabled={isLoading || !selectedUserName}
             className="w-full gap-2"
           >
             <LogIn className="h-4 w-4" />
@@ -267,7 +279,7 @@ export function ScanResultDialog({
         {isAdmin && item.status === 'available' && (
           <Button 
             onClick={() => handleAction('maintenance')} 
-            disabled={isLoading}
+            disabled={isLoading || !selectedUserName}
             variant="outline"
             className="w-full gap-2 text-maintenance hover:text-maintenance"
           >
@@ -278,7 +290,7 @@ export function ScanResultDialog({
         {isAdmin && item.status === 'checked-out' && (
           <Button 
             onClick={() => handleAction('maintenance')} 
-            disabled={isLoading}
+            disabled={isLoading || !selectedUserName}
             variant="outline"
             className="w-full gap-2 text-maintenance hover:text-maintenance"
           >
@@ -322,6 +334,23 @@ export function ScanResultDialog({
               <span>{item.location}</span>
             </div>
           </div>
+
+          {/* User Selection - Required for actions */}
+          {canCheckInOut && users.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                {item.status === 'available' ? 'Check out to:' : 'Performed by:'}
+              </Label>
+              <UserSelect
+                users={users}
+                value={selectedUserId}
+                onValueChange={handleUserSelect}
+                placeholder="Select user"
+                filterRoles={['admin', 'user', 'member']}
+              />
+            </div>
+          )}
 
           {/* Optional Location Update */}
           <Collapsible>

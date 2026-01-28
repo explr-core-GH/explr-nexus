@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useInventoryDB, InventoryItem } from '@/hooks/useInventoryDB';
 import { useLocations } from '@/hooks/useLocations';
+import { useSelectableUsers } from '@/hooks/useSelectableUsers';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatsCard } from '@/components/StatsCard';
 import { ItemCard } from '@/components/ItemCard';
@@ -46,6 +47,7 @@ const Index = () => {
   } = useInventoryDB();
   
   const { locations } = useLocations();
+  const { users: selectableUsers } = useSelectableUsers();
   const { profile, canCheckInOut } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,8 +114,8 @@ const Index = () => {
     });
   };
 
-  const handleCheckIn = async (itemId: string, locationId?: string) => {
-    const result = await checkIn(itemId, userName, locationId, locations);
+  const handleCheckIn = async (itemId: string, selectedUserName: string, locationId?: string) => {
+    const result = await checkIn(itemId, selectedUserName, locationId, locations);
     if (result && scannedItem) {
       const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
       setScannedItem({ 
@@ -127,8 +129,8 @@ const Index = () => {
     return result;
   };
 
-  const handleCheckOut = async (itemId: string, locationId?: string) => {
-    const result = await checkOut(itemId, userName, locationId, locations);
+  const handleCheckOut = async (itemId: string, selectedUserName: string, locationId?: string) => {
+    const result = await checkOut(itemId, selectedUserName, locationId, locations);
     if (result && scannedItem) {
       const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
       setScannedItem({ 
@@ -140,7 +142,7 @@ const Index = () => {
     return result;
   };
 
-  const handleMaintenance = async (itemId: string, locationId?: string) => {
+  const handleMaintenance = async (itemId: string, selectedUserName: string, locationId?: string) => {
     const result = await setMaintenance(itemId, locationId, locations);
     if (result && scannedItem) {
       const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
@@ -332,11 +334,12 @@ const Index = () => {
         item={selectedItem ? convertToUIItem(selectedItem) : null}
         open={detailOpen}
         onOpenChange={setDetailOpen}
-        onCheckIn={(itemId) => checkIn(itemId, userName)}
-        onCheckOut={(itemId) => checkOut(itemId, userName)}
+        onCheckIn={(itemId, selectedUserName) => checkIn(itemId, selectedUserName)}
+        onCheckOut={(itemId, selectedUserName) => checkOut(itemId, selectedUserName)}
         onDelete={handleDelete}
         onUpdate={updateItem}
         locations={locations}
+        users={selectableUsers}
         isAdmin={isAdmin}
         canCheckInOut={canCheckInOut}
       />
@@ -356,6 +359,7 @@ const Index = () => {
         open={scanResultOpen}
         scanMode={scanMode}
         locations={locations}
+        users={selectableUsers}
         onOpenChange={setScanResultOpen}
         onCheckIn={handleCheckIn}
         onCheckOut={handleCheckOut}
