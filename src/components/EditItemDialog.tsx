@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ImageUpload';
 import { LocationSelect } from '@/components/LocationSelect';
+import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { Location } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,8 +34,11 @@ interface EditItemDialogProps {
     location: string;
     locationId?: string;
     imageUrl?: string;
+    status?: string;
+    checkedOutBy?: string;
   };
   locations?: Location[];
+  users?: SelectableUser[];
   onUpdate: (id: string, updates: {
     name: string;
     description: string;
@@ -42,6 +46,7 @@ interface EditItemDialogProps {
     location: string;
     location_id: string | null;
     image_url: string | null;
+    checked_out_by?: string | null;
   }) => Promise<boolean>;
   trigger?: React.ReactNode;
 }
@@ -56,7 +61,7 @@ const CATEGORIES = [
   'Other',
 ];
 
-export function EditItemDialog({ item, locations = [], onUpdate, trigger }: EditItemDialogProps) {
+export function EditItemDialog({ item, locations = [], users = [], onUpdate, trigger }: EditItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description);
@@ -64,6 +69,7 @@ export function EditItemDialog({ item, locations = [], onUpdate, trigger }: Edit
   const [location, setLocation] = useState(item.location);
   const [locationId, setLocationId] = useState<string | undefined>(item.locationId);
   const [imageUrl, setImageUrl] = useState<string | null>(item.imageUrl || null);
+  const [assignedToName, setAssignedToName] = useState<string>(item.checkedOutBy || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -75,6 +81,7 @@ export function EditItemDialog({ item, locations = [], onUpdate, trigger }: Edit
     setLocation(item.location);
     setLocationId(item.locationId);
     setImageUrl(item.imageUrl || null);
+    setAssignedToName(item.checkedOutBy || '');
   }, [item]);
 
   const handleLocationChange = (locId: string) => {
@@ -85,20 +92,31 @@ export function EditItemDialog({ item, locations = [], onUpdate, trigger }: Edit
     }
   };
 
+  const handleUserChange = (userId: string, userName: string) => {
+    setAssignedToName(userName);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !category || !location) return;
 
     setIsSubmitting(true);
     try {
-      const success = await onUpdate(item.id, {
+      const updates: Parameters<typeof onUpdate>[1] = {
         name,
         description,
         category,
         location,
         location_id: locationId || null,
         image_url: imageUrl,
-      });
+      };
+      
+      // Only include checked_out_by if item is checked out
+      if (item.status === 'checked-out') {
+        updates.checked_out_by = assignedToName || null;
+      }
+
+      const success = await onUpdate(item.id, updates);
 
       if (success) {
         toast({
@@ -189,6 +207,19 @@ export function EditItemDialog({ item, locations = [], onUpdate, trigger }: Edit
               />
             )}
           </div>
+          {/* Assigned User (only for checked-out items) */}
+          {item.status === 'checked-out' && users.length > 0 && (
+            <div className="space-y-2">
+              <Label>Assigned To</Label>
+              <UserSelect
+                users={users}
+                value=""
+                onValueChange={handleUserChange}
+                placeholder={assignedToName || "Select user"}
+                filterRoles={['admin', 'user', 'member']}
+              />
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <Button 
               type="button" 

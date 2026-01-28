@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -22,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { EditItemDialog } from '@/components/EditItemDialog';
+import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { InventoryItem } from '@/types/inventory';
 import { Location } from '@/hooks/useLocations';
 import { format } from 'date-fns';
@@ -42,6 +42,7 @@ interface ItemDetailDialogProps {
     image_url: string | null;
   }) => Promise<boolean>;
   locations?: Location[];
+  users?: SelectableUser[];
   isAdmin?: boolean;
   canCheckInOut?: boolean;
 }
@@ -55,29 +56,37 @@ export function ItemDetailDialog({
   onDelete,
   onUpdate,
   locations = [],
+  users = [],
   isAdmin = false,
   canCheckInOut = true,
 }: ItemDetailDialogProps) {
-  const [userName, setUserName] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserName, setSelectedUserName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   if (!item) return null;
 
   const handleAction = async () => {
-    if (!userName.trim()) return;
+    if (!selectedUserName.trim()) return;
     setIsLoading(true);
     
     try {
       if (item.status === 'available') {
-        await onCheckOut(item.id, userName.trim());
+        await onCheckOut(item.id, selectedUserName.trim());
       } else if (item.status === 'checked-out') {
-        await onCheckIn(item.id, userName.trim());
+        await onCheckIn(item.id, selectedUserName.trim());
       }
-      setUserName('');
+      setSelectedUserId('');
+      setSelectedUserName('');
       onOpenChange(false);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUserSelect = (userId: string, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
   };
 
   const handleDelete = () => {
@@ -169,31 +178,33 @@ export function ItemDetailDialog({
           {/* Check In/Out Action */}
           {item.status !== 'maintenance' && canCheckInOut && (
             <div className="p-4 bg-secondary/50 rounded-lg space-y-3">
-              <Label htmlFor="userName">
+              <Label>
                 {item.status === 'available' ? 'Check out to:' : 'Check in by:'}
               </Label>
               <div className="flex gap-2">
-                <Input
-                  id="userName"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Enter name"
-                />
-                <Button onClick={handleAction} disabled={!userName.trim() || isLoading} className="gap-2">
+                <div className="flex-1">
+                  <UserSelect
+                    users={users}
+                    value={selectedUserId}
+                    onValueChange={handleUserSelect}
+                    placeholder="Select user"
+                    filterRoles={['admin', 'user', 'member']}
+                  />
+                </div>
+                <Button onClick={handleAction} disabled={!selectedUserName.trim() || isLoading} className="gap-2">
                   <ArrowLeftRight className="h-4 w-4" />
                   {item.status === 'available' ? 'Check Out' : 'Check In'}
                 </Button>
               </div>
             </div>
           )}
-
-          {/* Admin Actions */}
           {isAdmin && (
             <div className="flex gap-2">
               {onUpdate && (
                 <EditItemDialog
                   item={item}
                   locations={locations}
+                  users={users}
                   onUpdate={onUpdate}
                   trigger={
                     <Button variant="outline" className="flex-1 gap-2">
