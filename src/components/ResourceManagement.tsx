@@ -155,14 +155,23 @@ export function ResourceManagement() {
               filteredResources.map((resource) => {
                 const Icon = typeIcons[resource.type];
                 const isFile = !!resource.file_path;
+                const thumbnailUrl = resource.thumbnail_url ? getFileUrl(resource.thumbnail_url) : null;
                 
                 return (
                   <TableRow key={resource.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                          <Icon className="h-4 w-4 text-accent" />
-                        </div>
+                        {thumbnailUrl ? (
+                          <img 
+                            src={thumbnailUrl} 
+                            alt={resource.title}
+                            className="h-12 w-16 rounded-md object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="h-12 w-16 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                            <Icon className="h-5 w-5 text-accent" />
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="font-medium truncate">{resource.title}</p>
                           {resource.description && (

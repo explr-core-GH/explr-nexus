@@ -9,6 +9,7 @@ export interface Resource {
   type: 'link' | 'video' | 'manual' | 'curriculum';
   url: string | null;
   file_path: string | null;
+  thumbnail_url: string | null;
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -21,6 +22,7 @@ export interface NewResource {
   type: 'link' | 'video' | 'manual' | 'curriculum';
   url?: string;
   file_path?: string;
+  thumbnail_url?: string;
   tags: string[];
 }
 
@@ -71,6 +73,7 @@ export function useResources() {
           type: resource.type,
           url: resource.url || null,
           file_path: resource.file_path || null,
+          thumbnail_url: resource.thumbnail_url || null,
           tags: resource.tags,
           created_by: userData.user?.id || null,
         })
@@ -112,6 +115,7 @@ export function useResources() {
           type: updates.type,
           url: updates.url,
           file_path: updates.file_path,
+          thumbnail_url: updates.thumbnail_url,
           tags: updates.tags,
         })
         .eq('id', id)

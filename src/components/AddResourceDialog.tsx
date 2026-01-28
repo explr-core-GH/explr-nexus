@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, Upload, Link as LinkIcon, Video, FileText, GraduationCap, X } from 'lucide-react';
+import { Plus, Upload, Link as LinkIcon, Video, FileText, GraduationCap, X, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
-import { NewResource, useResources } from '@/hooks/useResources';
+import { NewResource } from '@/hooks/useResources';
 
 interface AddResourceDialogProps {
   onAdd: (resource: NewResource) => Promise<any>;
@@ -36,8 +36,11 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   const [type, setType] = useState<NewResource['type']>('link');
   const [url, setUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedThumbnail, setSelectedThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
     setTitle('');
@@ -45,6 +48,8 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     setType('link');
     setUrl('');
     setSelectedFile(null);
+    setSelectedThumbnail(null);
+    setThumbnailPreview(null);
     setTags([]);
   };
 
@@ -56,6 +61,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     
     try {
       let filePath: string | null = null;
+      let thumbnailPath: string | null = null;
       
       // Upload file if selected
       if (selectedFile && (type === 'manual' || type === 'curriculum')) {
@@ -66,12 +72,18 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
         }
       }
       
+      // Upload thumbnail if selected
+      if (selectedThumbnail) {
+        thumbnailPath = await uploadFile(selectedThumbnail);
+      }
+      
       await onAdd({
         title: title.trim(),
         description: description.trim() || undefined,
         type,
-        url: type === 'link' || type === 'video' ? url.trim() : undefined,
+        url: type === 'link' || type === 'video' ? url.trim() : (url.trim() || undefined),
         file_path: filePath || undefined,
+        thumbnail_url: thumbnailPath || undefined,
         tags,
       });
       
@@ -86,6 +98,27 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+    }
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedThumbnail(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeThumbnail = () => {
+    setSelectedThumbnail(null);
+    setThumbnailPreview(null);
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
     }
   };
 
@@ -170,6 +203,51 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
               </Select>
             </div>
 
+            {/* Thumbnail Image */}
+            <div className="space-y-2">
+              <Label>Preview Image</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Add a thumbnail image that members will see
+              </p>
+              <div className="flex items-start gap-3">
+                <input
+                  ref={thumbnailInputRef}
+                  type="file"
+                  onChange={handleThumbnailChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                {thumbnailPreview ? (
+                  <div className="relative">
+                    <img 
+                      src={thumbnailPreview} 
+                      alt="Thumbnail preview" 
+                      className="w-24 h-24 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={removeThumbnail}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => thumbnailInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    <Image className="h-4 w-4" />
+                    Upload Image
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {/* URL (for links and videos) */}
             {needsUrl && (
               <div className="space-y-2">
@@ -188,7 +266,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
             {/* File Upload (for manuals and curriculum) */}
             {needsFile && (
               <div className="space-y-2">
-                <Label>Upload File</Label>
+                <Label>Upload Document</Label>
                 <div className="flex items-center gap-2">
                   <input
                     ref={fileInputRef}
@@ -222,7 +300,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Or provide a URL above for externally hosted files
+                  Or provide a URL below for externally hosted files
                 </p>
                 {/* Optional URL for files */}
                 <Input
