@@ -36,7 +36,6 @@ export function ScanResultDialog({
   onMaintenance,
   isAdmin = false,
 }: ScanResultDialogProps) {
-  const [userName, setUserName] = useState('');
   const [location, setLocation] = useState('');
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
@@ -44,8 +43,6 @@ export function ScanResultDialog({
 
   const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance' | 'return-from-maintenance') => {
     if (!item) return;
-    // Only require userName for regular check-in/check-out, not for return from maintenance
-    if ((action === 'check-in' || action === 'check-out') && !userName.trim()) return;
     
     setIsLoading(true);
     
@@ -70,7 +67,6 @@ export function ScanResultDialog({
   };
 
   const handleClose = () => {
-    setUserName('');
     setLocation('');
     setActionComplete(false);
     setLastAction(null);
