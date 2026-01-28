@@ -1,16 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Briefcase, MapPin } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+  fullName?: string;
+  organizationName?: string;
+  position?: string;
+  organizationAddress?: string;
+}
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -28,12 +38,15 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
+  const [position, setPosition] = useState('');
+  const [organizationAddress, setOrganizationAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const { toast } = useToast();
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string; fullName?: string } = {};
+    const newErrors: FormErrors = {};
     
     const emailResult = emailSchema.safeParse(email);
     if (!emailResult.success) {
@@ -45,8 +58,19 @@ const Auth = () => {
       newErrors.password = passwordResult.error.errors[0].message;
     }
     
-    if (!isLogin && !fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+    if (!isLogin) {
+      if (!fullName.trim()) {
+        newErrors.fullName = 'Full name is required';
+      }
+      if (!organizationName.trim()) {
+        newErrors.organizationName = 'School/Organization name is required';
+      }
+      if (!position.trim()) {
+        newErrors.position = 'Position is required';
+      }
+      if (!organizationAddress.trim()) {
+        newErrors.organizationAddress = 'School/Organization address is required';
+      }
     }
     
     setErrors(newErrors);
@@ -75,22 +99,41 @@ const Auth = () => {
         });
         navigate('/');
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
               full_name: fullName,
+              organization_name: organizationName,
+              position: position,
+              organization_address: organizationAddress,
             },
           },
         });
         
         if (error) throw error;
+
+        // Update the profile with organization info after signup
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              organization_name: organizationName,
+              position: position,
+              organization_address: organizationAddress,
+            })
+            .eq('user_id', data.user.id);
+          
+          if (profileError) {
+            console.error('Error updating profile:', profileError);
+          }
+        }
         
         toast({
           title: 'Account created!',
-          description: 'You can now log in with your credentials.',
+          description: 'Your account is pending admin approval. You can log in but will have limited access until approved.',
         });
         navigate('/');
       }
@@ -127,7 +170,7 @@ const Auth = () => {
       {/* Auth Form */}
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md animate-slide-up">
-          <div className="bg-card rounded-xl border border-border p-8 shadow-lg">
+          <div className="bg-card rounded-xl border border-border p-8 shadow-lg max-h-[80vh] overflow-y-auto">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-foreground">
                 {isLogin ? 'Welcome Back' : 'Create Account'}
@@ -141,27 +184,82 @@ const Auth = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="John Doe"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                    />
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="fullName"
+                        type="text"
+                        placeholder="John Doe"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    {errors.fullName && (
+                      <p className="text-sm text-destructive">{errors.fullName}</p>
+                    )}
                   </div>
-                  {errors.fullName && (
-                    <p className="text-sm text-destructive">{errors.fullName}</p>
-                  )}
-                </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="organizationName">School/Organization Name *</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="organizationName"
+                        type="text"
+                        placeholder="Greenwood High School"
+                        value={organizationName}
+                        onChange={(e) => setOrganizationName(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    {errors.organizationName && (
+                      <p className="text-sm text-destructive">{errors.organizationName}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="position">Position *</Label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="position"
+                        type="text"
+                        placeholder="Teacher, Administrator, etc."
+                        value={position}
+                        onChange={(e) => setPosition(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    {errors.position && (
+                      <p className="text-sm text-destructive">{errors.position}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="organizationAddress">School/Organization Address *</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Textarea
+                        id="organizationAddress"
+                        placeholder="123 Education Lane, City, State 12345"
+                        value={organizationAddress}
+                        onChange={(e) => setOrganizationAddress(e.target.value)}
+                        className="pl-10 min-h-[80px]"
+                      />
+                    </div>
+                    {errors.organizationAddress && (
+                      <p className="text-sm text-destructive">{errors.organizationAddress}</p>
+                    )}
+                  </div>
+                </>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -179,7 +277,7 @@ const Auth = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password *</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
