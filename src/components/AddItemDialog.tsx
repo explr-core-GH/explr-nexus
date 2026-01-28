@@ -21,10 +21,11 @@ import {
 } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ImageUpload';
 import { LocationSelect } from '@/components/LocationSelect';
+import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { Location } from '@/hooks/useLocations';
 
 interface AddItemDialogProps {
-  onAdd: (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string }) => void;
+  onAdd: (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string; tags?: string[] }) => void;
   locations: Location[];
 }
 
@@ -45,6 +46,7 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
   const [category, setCategory] = useState('');
   const [locationId, setLocationId] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
 
   const selectedLocation = locations.find(l => l.id === locationId);
 
@@ -59,6 +61,7 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
       location: selectedLocation?.name || '',
       locationId,
       imageUrl: imageUrl || undefined,
+      tags: tags.length > 0 ? tags : undefined,
     });
 
     setName('');
@@ -66,6 +69,7 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
     setCategory('');
     setLocationId('');
     setImageUrl(null);
+    setTags([]);
     setOpen(false);
   };
 
@@ -139,6 +143,13 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
                 No locations available. Add locations in the Admin panel first.
               </p>
             )}
+          </div>
+          <div className="space-y-2">
+            <Label>Visibility Tags</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Select which member groups can see this item
+            </p>
+            <TagsCheckboxGroup selectedTags={tags} onTagsChange={setTags} />
           </div>
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>

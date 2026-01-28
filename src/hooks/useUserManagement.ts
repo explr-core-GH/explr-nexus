@@ -13,6 +13,7 @@ export interface UserWithRole {
   created_at: string;
   isAdmin: boolean;
   role: AppRole | null; // null means no role assigned
+  tags: string[]; // visibility tags for members
 }
 
 export function useUserManagement() {
@@ -57,6 +58,9 @@ export function useUserManagement() {
           role = 'member';
         }
         
+        // Handle tags - ensure it's always an array
+        const tags: string[] = Array.isArray(profile.tags) ? profile.tags : [];
+        
         return {
           id: profile.id,
           user_id: profile.user_id,
@@ -65,6 +69,7 @@ export function useUserManagement() {
           created_at: profile.created_at,
           isAdmin,
           role,
+          tags,
         };
       });
 
@@ -146,10 +151,51 @@ export function useUserManagement() {
     return setUserRole(userId, userName, 'user');
   };
 
+  const updateUserTags = async (userId: string, userName: string, tags: string[]) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can manage user tags',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ tags })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Tags Updated',
+        description: `${userName}'s visibility tags have been updated`,
+      });
+
+      // Update local state
+      setUsers(prev => prev.map(u => 
+        u.user_id === userId ? { ...u, tags } : u
+      ));
+
+      return true;
+    } catch (error) {
+      console.error('Error updating user tags:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user tags',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
     users,
     isLoading,
     setUserRole,
+    updateUserTags,
     promoteToAdmin,
     removeAdmin,
     refetch: fetchUsers,

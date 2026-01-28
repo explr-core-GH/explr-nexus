@@ -66,6 +66,7 @@ export type Database = {
           name: string
           qr_code: string
           status: string
+          tags: string[] | null
           updated_at: string
         }
         Insert: {
@@ -81,6 +82,7 @@ export type Database = {
           name: string
           qr_code: string
           status?: string
+          tags?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -96,6 +98,7 @@ export type Database = {
           name?: string
           qr_code?: string
           status?: string
+          tags?: string[] | null
           updated_at?: string
         }
         Relationships: [
@@ -147,6 +150,7 @@ export type Database = {
           organization_address: string | null
           organization_name: string | null
           position: string | null
+          tags: string[] | null
           updated_at: string
           user_id: string
         }
@@ -158,6 +162,7 @@ export type Database = {
           organization_address?: string | null
           organization_name?: string | null
           position?: string | null
+          tags?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -169,6 +174,7 @@ export type Database = {
           organization_address?: string | null
           organization_name?: string | null
           position?: string | null
+          tags?: string[] | null
           updated_at?: string
           user_id?: string
         }

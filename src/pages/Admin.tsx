@@ -11,7 +11,8 @@ import {
   Trash2,
   Map,
   Eye,
-  UserCheck
+  UserCheck,
+  Tags
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -52,11 +53,12 @@ import { UserMenu } from '@/components/UserMenu';
 import { AddLocationDialog } from '@/components/AddLocationDialog';
 import { LocationsMap } from '@/components/LocationsMap';
 import { LocationItemsDialog } from '@/components/LocationItemsDialog';
+import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { format } from 'date-fns';
 
 const Admin = () => {
   const { isAdmin, isLoading: authLoading, user } = useAuth();
-  const { users, isLoading: usersLoading, setUserRole } = useUserManagement();
+  const { users, isLoading: usersLoading, setUserRole, updateUserTags } = useUserManagement();
   const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
   const { items, isLoading: itemsLoading } = useInventoryDB();
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,6 +205,7 @@ const Admin = () => {
                   <TableRow className="bg-muted/50">
                     <TableHead>User</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead className="hidden md:table-cell">Tags</TableHead>
                     <TableHead className="hidden sm:table-cell">Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -210,7 +213,7 @@ const Admin = () => {
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         {users.length === 0 ? 'No users found' : 'No matching users'}
                       </TableCell>
                     </TableRow>
@@ -261,15 +264,42 @@ const Admin = () => {
                               <Badge variant="outline" className="text-muted-foreground">
                                 No Role
                               </Badge>
-                            )}
+                          )}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {userItem.tags.length > 0 ? (
+                                userItem.tags.slice(0, 3).map(tag => (
+                                  <Badge key={tag} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No tags</span>
+                              )}
+                              {userItem.tags.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{userItem.tags.length - 3}
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell text-muted-foreground">
                             {format(new Date(userItem.created_at), 'MMM d, yyyy')}
                           </TableCell>
                           <TableCell className="text-right">
-                            {isCurrentUser ? (
-                              <span className="text-sm text-muted-foreground">—</span>
-                            ) : (
+                            <div className="flex items-center justify-end gap-2">
+                              {!isCurrentUser && (
+                                <EditUserTagsDialog
+                                  userName={userItem.full_name}
+                                  userId={userItem.user_id}
+                                  currentTags={userItem.tags}
+                                  onSave={updateUserTags}
+                                />
+                              )}
+                              {isCurrentUser ? (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              ) : (
                               <Select
                                 value={userItem.role || 'none'}
                                 onValueChange={(value) => handleRoleChange(userItem, value)}
@@ -284,7 +314,8 @@ const Admin = () => {
                                   <SelectItem value="none">No Role</SelectItem>
                                 </SelectContent>
                               </Select>
-                            )}
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

@@ -12,6 +12,7 @@ export interface InventoryItem {
   location: string;
   locationId?: string;
   imageUrl?: string;
+  tags?: string[];
   createdAt: string;
   lastUpdated: string;
 }
