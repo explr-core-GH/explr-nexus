@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Plus, Upload, Link as LinkIcon, Video, FileText, GraduationCap, X, Image } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Plus, Upload, Link as LinkIcon, Video, FileText, GraduationCap, X, Image, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { NewResource } from '@/hooks/useResources';
+import { getVideoThumbnailUrl, isVideoUrl } from '@/lib/videoThumbnails';
 
 interface AddResourceDialogProps {
   onAdd: (resource: NewResource) => Promise<any>;
@@ -38,9 +39,36 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedThumbnail, setSelectedThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [autoThumbnailUrl, setAutoThumbnailUrl] = useState<string | null>(null);
+  const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-fetch video thumbnail when URL changes
+  useEffect(() => {
+    const fetchThumbnail = async () => {
+      if (type === 'video' && url && isVideoUrl(url)) {
+        setIsFetchingThumbnail(true);
+        try {
+          const thumbnailUrl = await getVideoThumbnailUrl(url);
+          if (thumbnailUrl) {
+            setAutoThumbnailUrl(thumbnailUrl);
+          }
+        } catch (error) {
+          console.error('Error fetching video thumbnail:', error);
+        } finally {
+          setIsFetchingThumbnail(false);
+        }
+      } else {
+        setAutoThumbnailUrl(null);
+      }
+    };
+
+    // Debounce the fetch
+    const timeoutId = setTimeout(fetchThumbnail, 500);
+    return () => clearTimeout(timeoutId);
+  }, [url, type]);
 
   const resetForm = () => {
     setTitle('');
@@ -50,6 +78,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     setSelectedFile(null);
     setSelectedThumbnail(null);
     setThumbnailPreview(null);
+    setAutoThumbnailUrl(null);
     setTags([]);
   };
 
@@ -72,10 +101,15 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
         }
       }
       
-      // Upload thumbnail if selected
+      // Upload custom thumbnail if selected, otherwise use auto-detected URL
       if (selectedThumbnail) {
         thumbnailPath = await uploadFile(selectedThumbnail);
       }
+      
+      // For the thumbnail_url, we'll store either:
+      // 1. The uploaded file path (if custom thumbnail uploaded)
+      // 2. The auto-detected video thumbnail URL (if available and no custom)
+      const finalThumbnailUrl = thumbnailPath || (autoThumbnailUrl && !selectedThumbnail ? autoThumbnailUrl : undefined);
       
       await onAdd({
         title: title.trim(),
@@ -83,7 +117,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
         type,
         url: type === 'link' || type === 'video' ? url.trim() : (url.trim() || undefined),
         file_path: filePath || undefined,
-        thumbnail_url: thumbnailPath || undefined,
+        thumbnail_url: finalThumbnailUrl,
         tags,
       });
       
@@ -124,6 +158,10 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
 
   const needsUrl = type === 'link' || type === 'video';
   const needsFile = type === 'manual' || type === 'curriculum';
+  
+  // Determine which thumbnail to show
+  const displayThumbnail = thumbnailPreview || autoThumbnailUrl;
+  const isAutoThumbnail = !thumbnailPreview && autoThumbnailUrl;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -203,51 +241,6 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
               </Select>
             </div>
 
-            {/* Thumbnail Image */}
-            <div className="space-y-2">
-              <Label>Preview Image</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Add a thumbnail image that members will see
-              </p>
-              <div className="flex items-start gap-3">
-                <input
-                  ref={thumbnailInputRef}
-                  type="file"
-                  onChange={handleThumbnailChange}
-                  className="hidden"
-                  accept="image/*"
-                />
-                {thumbnailPreview ? (
-                  <div className="relative">
-                    <img 
-                      src={thumbnailPreview} 
-                      alt="Thumbnail preview" 
-                      className="w-24 h-24 object-cover rounded-lg border"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6"
-                      onClick={removeThumbnail}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => thumbnailInputRef.current?.click()}
-                    className="gap-2"
-                  >
-                    <Image className="h-4 w-4" />
-                    Upload Image
-                  </Button>
-                )}
-              </div>
-            </div>
-
             {/* URL (for links and videos) */}
             {needsUrl && (
               <div className="space-y-2">
@@ -257,11 +250,75 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder={type === 'video' ? 'https://youtube.com/...' : 'https://...'}
+                  placeholder={type === 'video' ? 'https://youtube.com/watch?v=...' : 'https://...'}
                   required={needsUrl}
                 />
+                {type === 'video' && (
+                  <p className="text-xs text-muted-foreground">
+                    YouTube and Vimeo thumbnails are extracted automatically
+                  </p>
+                )}
               </div>
             )}
+
+            {/* Preview Image */}
+            <div className="space-y-2">
+              <Label>Preview Image</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                {type === 'video' 
+                  ? 'Auto-detected from video URL, or upload a custom image' 
+                  : 'Add a thumbnail image that members will see'}
+              </p>
+              <div className="flex items-start gap-3">
+                <input
+                  ref={thumbnailInputRef}
+                  type="file"
+                  onChange={handleThumbnailChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                
+                {isFetchingThumbnail ? (
+                  <div className="w-24 h-24 rounded-lg border bg-muted flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : displayThumbnail ? (
+                  <div className="relative">
+                    <img 
+                      src={displayThumbnail} 
+                      alt="Thumbnail preview" 
+                      className="w-24 h-24 object-cover rounded-lg border"
+                    />
+                    {isAutoThumbnail && (
+                      <span className="absolute bottom-1 left-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded">
+                        Auto
+                      </span>
+                    )}
+                    {!isAutoThumbnail && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={removeThumbnail}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Image className="h-4 w-4" />
+                  {displayThumbnail ? 'Change Image' : 'Upload Image'}
+                </Button>
+              </div>
+            </div>
 
             {/* File Upload (for manuals and curriculum) */}
             {needsFile && (
