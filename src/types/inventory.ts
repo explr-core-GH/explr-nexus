@@ -10,6 +10,7 @@ export interface InventoryItem {
   checkedOutBy?: string;
   checkedOutAt?: string;
   location: string;
+  locationId?: string;
   imageUrl?: string;
   createdAt: string;
   lastUpdated: string;

@@ -23,6 +23,7 @@ import {
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { EditItemDialog } from '@/components/EditItemDialog';
 import { InventoryItem } from '@/types/inventory';
+import { Location } from '@/hooks/useLocations';
 import { format } from 'date-fns';
 
 interface ItemDetailDialogProps {
@@ -37,8 +38,10 @@ interface ItemDetailDialogProps {
     description: string;
     category: string;
     location: string;
+    location_id: string | null;
     image_url: string | null;
   }) => Promise<boolean>;
+  locations?: Location[];
   isAdmin?: boolean;
 }
 
@@ -50,6 +53,7 @@ export function ItemDetailDialog({
   onCheckOut,
   onDelete,
   onUpdate,
+  locations = [],
   isAdmin = false,
 }: ItemDetailDialogProps) {
   const [userName, setUserName] = useState('');
@@ -187,6 +191,7 @@ export function ItemDetailDialog({
               {onUpdate && (
                 <EditItemDialog
                   item={item}
+                  locations={locations}
                   onUpdate={onUpdate}
                   trigger={
                     <Button variant="outline" className="flex-1 gap-2">
