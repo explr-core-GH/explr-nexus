@@ -89,13 +89,38 @@ const Resources = () => {
     }
   };
 
+  // Get file extension from file_path
+  const getFileExtension = (filePath: string | null): string | null => {
+    if (!filePath) return null;
+    const parts = filePath.split('.');
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : null;
+  };
+
+  // Document type colors and labels
+  const documentTypeStyles: Record<string, { bg: string; text: string; label: string }> = {
+    pdf: { bg: 'bg-red-500/10', text: 'text-red-500', label: 'PDF' },
+    doc: { bg: 'bg-blue-500/10', text: 'text-blue-500', label: 'DOC' },
+    docx: { bg: 'bg-blue-500/10', text: 'text-blue-500', label: 'DOCX' },
+    ppt: { bg: 'bg-orange-500/10', text: 'text-orange-500', label: 'PPT' },
+    pptx: { bg: 'bg-orange-500/10', text: 'text-orange-500', label: 'PPTX' },
+    xls: { bg: 'bg-green-500/10', text: 'text-green-500', label: 'XLS' },
+    xlsx: { bg: 'bg-green-500/10', text: 'text-green-500', label: 'XLSX' },
+    txt: { bg: 'bg-gray-500/10', text: 'text-gray-500', label: 'TXT' },
+  };
+
   const ResourceCard = ({ resource }: { resource: Resource }) => {
     const Icon = typeIcons[resource.type];
     const isFile = !!resource.file_path;
+    const fileExt = getFileExtension(resource.file_path);
+    const docStyle = fileExt ? documentTypeStyles[fileExt] : null;
+    
     // Handle both external URLs (YouTube/Vimeo) and uploaded file paths
     const thumbnailUrl = resource.thumbnail_url 
       ? (resource.thumbnail_url.startsWith('http') ? resource.thumbnail_url : getFileUrl(resource.thumbnail_url))
       : null;
+    
+    // Show document placeholder for files without thumbnails
+    const showDocPlaceholder = isFile && !thumbnailUrl && docStyle;
     
     return (
       <Card 
@@ -103,7 +128,7 @@ const Resources = () => {
         onClick={() => handleResourceClick(resource)}
       >
         {/* Thumbnail Image */}
-        {thumbnailUrl && (
+        {thumbnailUrl ? (
           <div className="aspect-video w-full overflow-hidden bg-muted">
             <img 
               src={thumbnailUrl} 
@@ -111,8 +136,13 @@ const Resources = () => {
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           </div>
-        )}
-        <CardHeader className={thumbnailUrl ? "pb-3 pt-4" : "pb-3"}>
+        ) : showDocPlaceholder ? (
+          <div className={`aspect-video w-full overflow-hidden ${docStyle.bg} flex flex-col items-center justify-center gap-2`}>
+            <FileText className={`h-12 w-12 ${docStyle.text}`} />
+            <span className={`text-sm font-semibold ${docStyle.text}`}>{docStyle.label}</span>
+          </div>
+        ) : null}
+        <CardHeader className={thumbnailUrl || showDocPlaceholder ? "pb-3 pt-4" : "pb-3"}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-accent/10">
