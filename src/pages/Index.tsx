@@ -30,6 +30,7 @@ import { UserMenu } from '@/components/UserMenu';
 import { ScanButton, ScanMode } from '@/components/ScanButton';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
 import { AdminNotifications } from '@/components/AdminNotifications';
+import { InstallPWAButton } from '@/components/InstallPWAButton';
 
 const Index = () => {
   const { 
@@ -220,6 +221,7 @@ const Index = () => {
               <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
             </div>
             <div className="flex items-center gap-2">
+              <InstallPWAButton />
               {isAdmin && <AdminNotifications />}
               {canCheckInOut && (
                 <ScanButton 
