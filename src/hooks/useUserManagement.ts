@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type AppRole = 'admin' | 'user' | 'member';
+
 export interface UserWithRole {
   id: string;
   user_id: string;
@@ -10,6 +12,7 @@ export interface UserWithRole {
   email: string | null;
   created_at: string;
   isAdmin: boolean;
+  role: AppRole | null; // null means no role assigned
 }
 
 export function useUserManagement() {
@@ -41,14 +44,29 @@ export function useUserManagement() {
       if (rolesError) throw rolesError;
 
       // Combine profiles with roles
-      const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => ({
-        id: profile.id,
-        user_id: profile.user_id,
-        full_name: profile.full_name,
-        email: profile.email,
-        created_at: profile.created_at,
-        isAdmin: roles?.some(r => r.user_id === profile.user_id && r.role === 'admin') ?? false,
-      }));
+      const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => {
+        const userRoles = roles?.filter(r => r.user_id === profile.user_id) ?? [];
+        const isAdmin = userRoles.some(r => r.role === 'admin');
+        // Determine the primary role (admin > user > member > null)
+        let role: AppRole | null = null;
+        if (isAdmin) {
+          role = 'admin';
+        } else if (userRoles.some(r => r.role === 'user')) {
+          role = 'user';
+        } else if (userRoles.some(r => r.role === 'member')) {
+          role = 'member';
+        }
+        
+        return {
+          id: profile.id,
+          user_id: profile.user_id,
+          full_name: profile.full_name,
+          email: profile.email,
+          created_at: profile.created_at,
+          isAdmin,
+          role,
+        };
+      });
 
       setUsers(usersWithRoles);
     } catch (error) {
@@ -67,7 +85,7 @@ export function useUserManagement() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const promoteToAdmin = async (userId: string, userName: string) => {
+  const setUserRole = async (userId: string, userName: string, newRole: AppRole | null) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -78,88 +96,60 @@ export function useUserManagement() {
     }
 
     try {
-      const { error } = await supabase
+      // First, remove all existing roles for this user
+      const { error: deleteError } = await supabase
         .from('user_roles')
-        .insert({ user_id: userId, role: 'admin' });
+        .delete()
+        .eq('user_id', userId);
 
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: 'Already Admin',
-            description: `${userName} is already an administrator`,
-            variant: 'destructive',
-          });
-          return false;
-        }
-        throw error;
+      if (deleteError) throw deleteError;
+
+      // If new role is not null, insert it
+      if (newRole) {
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: newRole });
+
+        if (insertError) throw insertError;
       }
 
+      const roleLabel = newRole ? newRole.charAt(0).toUpperCase() + newRole.slice(1) : 'None';
       toast({
         title: 'Role Updated',
-        description: `${userName} has been promoted to administrator`,
+        description: `${userName}'s role has been set to ${roleLabel}`,
       });
 
       // Update local state
       setUsers(prev => prev.map(u => 
-        u.user_id === userId ? { ...u, isAdmin: true } : u
+        u.user_id === userId ? { ...u, role: newRole, isAdmin: newRole === 'admin' } : u
       ));
 
       return true;
     } catch (error) {
-      console.error('Error promoting user:', error);
+      console.error('Error setting user role:', error);
       toast({
         title: 'Error',
-        description: 'Failed to promote user to admin',
+        description: 'Failed to update user role',
         variant: 'destructive',
       });
       return false;
     }
   };
 
+  // Legacy functions for backwards compatibility
+  const promoteToAdmin = async (userId: string, userName: string) => {
+    return setUserRole(userId, userName, 'admin');
+  };
+
   const removeAdmin = async (userId: string, userName: string) => {
-    if (!isAdmin) {
-      toast({
-        title: 'Permission Denied',
-        description: 'Only admins can manage roles',
-        variant: 'destructive',
-      });
-      return false;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', 'admin');
-
-      if (error) throw error;
-
-      toast({
-        title: 'Role Updated',
-        description: `${userName} has been removed from administrators`,
-      });
-
-      // Update local state
-      setUsers(prev => prev.map(u => 
-        u.user_id === userId ? { ...u, isAdmin: false } : u
-      ));
-
-      return true;
-    } catch (error) {
-      console.error('Error removing admin:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to remove admin role',
-        variant: 'destructive',
-      });
-      return false;
-    }
+    // When removing admin, set to 'user' role instead of null
+    return setUserRole(userId, userName, 'user');
   };
 
   return {
     users,
     isLoading,
+    setUserRole,
     promoteToAdmin,
     removeAdmin,
     refetch: fetchUsers,

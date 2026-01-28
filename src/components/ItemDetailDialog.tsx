@@ -43,6 +43,7 @@ interface ItemDetailDialogProps {
   }) => Promise<boolean>;
   locations?: Location[];
   isAdmin?: boolean;
+  canCheckInOut?: boolean;
 }
 
 export function ItemDetailDialog({
@@ -55,6 +56,7 @@ export function ItemDetailDialog({
   onUpdate,
   locations = [],
   isAdmin = false,
+  canCheckInOut = true,
 }: ItemDetailDialogProps) {
   const [userName, setUserName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -165,7 +167,7 @@ export function ItemDetailDialog({
           </div>
 
           {/* Check In/Out Action */}
-          {item.status !== 'maintenance' && (
+          {item.status !== 'maintenance' && canCheckInOut && (
             <div className="p-4 bg-secondary/50 rounded-lg space-y-3">
               <Label htmlFor="userName">
                 {item.status === 'available' ? 'Check out to:' : 'Check in by:'}

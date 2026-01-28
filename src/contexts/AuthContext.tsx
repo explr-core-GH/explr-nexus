@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   id: string;
@@ -10,11 +9,15 @@ interface Profile {
   email: string | null;
 }
 
+type AppRole = 'admin' | 'user' | 'member';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   isAdmin: boolean;
+  canCheckInOut: boolean; // true for admin and user, false for member
+  userRole: AppRole | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
 }
@@ -26,6 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canCheckInOut, setCanCheckInOut] = useState(false);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setIsAdmin(false);
+          setCanCheckInOut(false);
+          setUserRole(null);
           setIsLoading(false);
         }
       }
@@ -78,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileData);
       }
 
-      // Fetch role - check if user is admin
+      // Fetch role - check user roles
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -88,7 +95,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching roles:', roleError);
       } else {
         const hasAdminRole = roleData?.some(r => r.role === 'admin') ?? false;
+        const hasUserRole = roleData?.some(r => r.role === 'user') ?? false;
+        const hasMemberRole = roleData?.some(r => r.role === 'member') ?? false;
+        
         setIsAdmin(hasAdminRole);
+        // Admin and User can check in/out, Member cannot
+        setCanCheckInOut(hasAdminRole || hasUserRole);
+        
+        // Set primary role
+        if (hasAdminRole) {
+          setUserRole('admin');
+        } else if (hasUserRole) {
+          setUserRole('user');
+        } else if (hasMemberRole) {
+          setUserRole('member');
+        } else {
+          setUserRole(null);
+        }
       }
     } catch (error) {
       console.error('Error in fetchProfileAndRole:', error);
@@ -103,10 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setIsAdmin(false);
+    setCanCheckInOut(false);
+    setUserRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, isAdmin, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, isLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
