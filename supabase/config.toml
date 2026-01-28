@@ -1,1 +1,16 @@
 project_id = "hosrgcfkudjexatngcwp"
+
+[functions.assign-role]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.fetch-opengraph]
+verify_jwt = false
+
+[functions.geocode]
+verify_jwt = false
+
+[functions.generate-document-thumbnail]
+verify_jwt = false

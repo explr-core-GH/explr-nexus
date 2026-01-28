@@ -23,8 +23,10 @@ import {
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { NewResource } from '@/hooks/useResources';
 import { getVideoThumbnailUrl, isVideoUrl } from '@/lib/videoThumbnails';
-import { isPdfFile } from '@/lib/documentThumbnails';
+import { isPdfFile, isDocumentFile } from '@/lib/documentThumbnails';
 import { fetchOpenGraphData, isRegularWebsite } from '@/lib/openGraph';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddResourceDialogProps {
   onAdd: (resource: NewResource) => Promise<any>;
@@ -32,6 +34,7 @@ interface AddResourceDialogProps {
 }
 
 export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
@@ -42,9 +45,10 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
   const [selectedThumbnail, setSelectedThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [autoThumbnailUrl, setAutoThumbnailUrl] = useState<string | null>(null);
-  const [autoThumbnailFile, setAutoThumbnailFile] = useState<File | null>(null);
+  const [autoThumbnailPath, setAutoThumbnailPath] = useState<string | null>(null);
   const [autoThumbnailSource, setAutoThumbnailSource] = useState<string | null>(null);
   const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
+  const [isGeneratingDocThumbnail, setIsGeneratingDocThumbnail] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +58,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     const fetchThumbnail = async () => {
       if (!url) {
         setAutoThumbnailUrl(null);
-        setAutoThumbnailFile(null);
+        setAutoThumbnailPath(null);
         setAutoThumbnailSource(null);
         return;
       }
@@ -66,7 +70,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
           const thumbnailUrl = await getVideoThumbnailUrl(url);
           if (thumbnailUrl) {
             setAutoThumbnailUrl(thumbnailUrl);
-            setAutoThumbnailFile(null);
+            setAutoThumbnailPath(null);
             setAutoThumbnailSource('Video');
           }
         } catch (error) {
@@ -83,7 +87,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
             const ogData = await fetchOpenGraphData(url);
             if (ogData?.imageUrl) {
               setAutoThumbnailUrl(ogData.imageUrl);
-              setAutoThumbnailFile(null);
+              setAutoThumbnailPath(null);
               setAutoThumbnailSource('Link');
               // Auto-fill title and description if empty
               if (!title && ogData.title) {
@@ -101,7 +105,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
         }
       } else if (!selectedFile) {
         setAutoThumbnailUrl(null);
-        setAutoThumbnailFile(null);
+        setAutoThumbnailPath(null);
         setAutoThumbnailSource(null);
       }
     };
@@ -111,8 +115,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     return () => clearTimeout(timeoutId);
   }, [url, type]);
 
-  // Note: PDF thumbnail auto-generation disabled due to build compatibility
-  // Users should upload custom thumbnails for PDFs
+  // Note: Document thumbnails are generated via CloudConvert after file upload
 
   const resetForm = () => {
     setTitle('');
@@ -123,8 +126,9 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
     setSelectedThumbnail(null);
     setThumbnailPreview(null);
     setAutoThumbnailUrl(null);
-    setAutoThumbnailFile(null);
+    setAutoThumbnailPath(null);
     setAutoThumbnailSource(null);
+    setIsGeneratingDocThumbnail(false);
     setTags([]);
   };
 
@@ -145,21 +149,51 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
           setIsSubmitting(false);
           return;
         }
+        
+        // Generate thumbnail for document files via CloudConvert
+        if (isDocumentFile(selectedFile) && !selectedThumbnail) {
+          setIsGeneratingDocThumbnail(true);
+          try {
+            // Get the public URL of the uploaded file
+            const { data: urlData } = supabase.storage.from('resources').getPublicUrl(filePath);
+            const fileUrl = urlData.publicUrl;
+            
+            const { data, error } = await supabase.functions.invoke('generate-document-thumbnail', {
+              body: { fileUrl, fileName: selectedFile.name }
+            });
+            
+            if (error) {
+              console.error('Error generating thumbnail:', error);
+              toast({
+                title: 'Note',
+                description: 'Document uploaded but thumbnail generation failed. You can add a preview image later.',
+                variant: 'default',
+              });
+            } else if (data?.thumbnailPath) {
+              thumbnailPath = data.thumbnailPath;
+              console.log('Thumbnail generated:', thumbnailPath);
+            }
+          } catch (err) {
+            console.error('Thumbnail generation error:', err);
+          } finally {
+            setIsGeneratingDocThumbnail(false);
+          }
+        }
       }
       
-      // Determine which thumbnail to upload
-      // Priority: custom uploaded > auto-generated file (PDF) > auto URL (video/link)
+      // Determine which thumbnail to use
+      // Priority: custom uploaded > CloudConvert generated > auto URL (video/link)
       if (selectedThumbnail) {
         thumbnailPath = await uploadFile(selectedThumbnail);
-      } else if (autoThumbnailFile) {
-        // Upload the auto-generated PDF thumbnail
-        thumbnailPath = await uploadFile(autoThumbnailFile);
+      } else if (autoThumbnailPath) {
+        // Use the already-generated CloudConvert thumbnail path
+        thumbnailPath = autoThumbnailPath;
       }
       
       // For the thumbnail_url, we'll store either:
-      // 1. The uploaded file path (if custom or PDF auto-thumbnail uploaded)
+      // 1. The uploaded/generated file path
       // 2. The auto-detected thumbnail URL (video or OpenGraph)
-      const finalThumbnailUrl = thumbnailPath || (autoThumbnailUrl && !autoThumbnailFile ? autoThumbnailUrl : undefined);
+      const finalThumbnailUrl = thumbnailPath || (autoThumbnailUrl && !autoThumbnailPath ? autoThumbnailUrl : undefined);
       
       await onAdd({
         title: title.trim(),
@@ -184,7 +218,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
       setSelectedFile(file);
       // Clear any existing auto-thumbnail to regenerate
       setAutoThumbnailUrl(null);
-      setAutoThumbnailFile(null);
+      setAutoThumbnailPath(null);
       setAutoThumbnailSource(null);
     }
   };
@@ -347,7 +381,7 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                         onClick={() => {
                           setSelectedFile(null);
                           setAutoThumbnailUrl(null);
-                          setAutoThumbnailFile(null);
+                          setAutoThumbnailPath(null);
                           setAutoThumbnailSource(null);
                         }}
                       >
@@ -356,9 +390,9 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
                     </div>
                   )}
                 </div>
-                {selectedFile && isPdfFile(selectedFile) && (
+                {selectedFile && isDocumentFile(selectedFile) && (
                   <p className="text-xs text-muted-foreground">
-                    💡 Upload a preview image below to show members what this PDF contains
+                    ✨ A preview thumbnail will be auto-generated when you save
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
@@ -456,9 +490,9 @@ export function AddResourceDialog({ onAdd, uploadFile }: AddResourceDialogProps)
             </Button>
             <Button 
               type="submit" 
-              disabled={!title.trim() || tags.length === 0 || isSubmitting || (needsUrl && !url.trim() && !selectedFile)}
+              disabled={!title.trim() || tags.length === 0 || isSubmitting || isGeneratingDocThumbnail || (needsUrl && !url.trim() && !selectedFile)}
             >
-              {isSubmitting ? 'Adding...' : 'Add Resource'}
+              {isGeneratingDocThumbnail ? 'Generating Preview...' : isSubmitting ? 'Adding...' : 'Add Resource'}
             </Button>
           </DialogFooter>
         </form>
