@@ -13,6 +13,8 @@ export interface ItemRequest {
   message: string | null;
   status: 'pending' | 'approved' | 'denied';
   adminResponse: string | null;
+  preferredDates: string[];
+  confirmedDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +45,8 @@ export function useItemRequests() {
         message: r.message,
         status: r.status as 'pending' | 'approved' | 'denied',
         adminResponse: r.admin_response,
+        preferredDates: (r.preferred_dates as string[]) || [],
+        confirmedDate: r.confirmed_date,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
@@ -62,7 +66,8 @@ export function useItemRequests() {
     requesterName: string,
     requesterEmail: string | null,
     requesterOrganization: string | null,
-    message?: string
+    message?: string,
+    preferredDates?: Date[]
   ): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -76,6 +81,7 @@ export function useItemRequests() {
         requester_email: requesterEmail,
         requester_organization: requesterOrganization,
         message: message || null,
+        preferred_dates: preferredDates?.map(d => d.toISOString()) || [],
       });
 
       if (error) throw error;
@@ -101,7 +107,8 @@ export function useItemRequests() {
   const updateRequest = async (
     requestId: string,
     status: 'approved' | 'denied',
-    adminResponse?: string
+    adminResponse?: string,
+    confirmedDate?: string
   ): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -109,6 +116,7 @@ export function useItemRequests() {
         .update({
           status,
           admin_response: adminResponse || null,
+          confirmed_date: confirmedDate || null,
         })
         .eq('id', requestId);
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Clock, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, XCircle, MessageSquare, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,6 +20,8 @@ interface MyRequest {
   message: string | null;
   status: 'pending' | 'approved' | 'denied';
   adminResponse: string | null;
+  preferredDates: string[];
+  confirmedDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +50,8 @@ export function MyRequestsSheet() {
         message: r.message,
         status: r.status as 'pending' | 'approved' | 'denied',
         adminResponse: r.admin_response,
+        preferredDates: (r.preferred_dates as string[]) || [],
+        confirmedDate: r.confirmed_date,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
@@ -142,6 +146,39 @@ export function MyRequestsSheet() {
                     </div>
                   </div>
 
+                  {/* Preferred Dates */}
+                  {request.preferredDates.length > 0 && (
+                    <div className="p-2 bg-secondary/50 rounded text-sm">
+                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                        Your preferred times:
+                      </div>
+                      <ul className="space-y-0.5 pl-5">
+                        {request.preferredDates.map((date, idx) => (
+                          <li key={idx} className="list-disc text-muted-foreground">
+                            {format(new Date(date), 'EEE, MMM d • h:mm a')}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Confirmed Pickup Date */}
+                  {request.confirmedDate && (
+                    <div className="p-3 bg-green-500/10 rounded text-sm border-l-4 border-green-500">
+                      <div className="font-medium mb-1 flex items-center gap-1.5 text-green-700">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Confirmed Pickup
+                      </div>
+                      <p className="font-semibold text-green-800">
+                        {format(new Date(request.confirmedDate), 'EEEE, MMMM d, yyyy')}
+                      </p>
+                      <p className="text-green-700">
+                        {format(new Date(request.confirmedDate), 'h:mm a')}
+                      </p>
+                    </div>
+                  )}
+
                   {request.message && (
                     <div className="p-2 bg-secondary/50 rounded text-sm">
                       <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
@@ -172,7 +209,7 @@ export function MyRequestsSheet() {
                     </div>
                   )}
 
-                  {request.status !== 'pending' && !request.adminResponse && (
+                  {request.status !== 'pending' && !request.adminResponse && !request.confirmedDate && (
                     <div className={`p-2 rounded text-sm ${
                       request.status === 'approved' 
                         ? 'bg-green-500/10 text-green-700' 

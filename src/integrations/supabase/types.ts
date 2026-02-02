@@ -211,11 +211,13 @@ export type Database = {
       item_requests: {
         Row: {
           admin_response: string | null
+          confirmed_date: string | null
           created_at: string
           id: string
           item_id: string
           item_name: string
           message: string | null
+          preferred_dates: string[] | null
           requester_email: string | null
           requester_id: string
           requester_name: string
@@ -225,11 +227,13 @@ export type Database = {
         }
         Insert: {
           admin_response?: string | null
+          confirmed_date?: string | null
           created_at?: string
           id?: string
           item_id: string
           item_name: string
           message?: string | null
+          preferred_dates?: string[] | null
           requester_email?: string | null
           requester_id: string
           requester_name: string
@@ -239,11 +243,13 @@ export type Database = {
         }
         Update: {
           admin_response?: string | null
+          confirmed_date?: string | null
           created_at?: string
           id?: string
           item_id?: string
           item_name?: string
           message?: string | null
+          preferred_dates?: string[] | null
           requester_email?: string | null
           requester_id?: string
           requester_name?: string
