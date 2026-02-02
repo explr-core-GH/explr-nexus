@@ -23,21 +23,12 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { LocationSelect } from '@/components/LocationSelect';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { Location } from '@/hooks/useLocations';
+import { useCategories } from '@/hooks/useCategories';
 
 interface AddItemDialogProps {
   onAdd: (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string; tags?: string[] }) => void;
   locations: Location[];
 }
-
-const CATEGORIES = [
-  'Electronics',
-  'Tools',
-  'Safety Equipment',
-  'Vehicles',
-  'Furniture',
-  'Office Supplies',
-  'Other',
-];
 
 export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
   const [open, setOpen] = useState(false);
@@ -47,6 +38,7 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
   const [locationId, setLocationId] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const { categories, isLoading: categoriesLoading } = useCategories();
 
   const selectedLocation = locations.find(l => l.id === locationId);
 
@@ -117,18 +109,23 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select value={category} onValueChange={setCategory} required disabled={categoriesLoading}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select category"} />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {categories.length === 0 && !categoriesLoading && (
+              <p className="text-xs text-muted-foreground">
+                No categories available. Add categories in the Admin panel first.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="location">Location *</Label>
