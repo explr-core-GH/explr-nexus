@@ -29,10 +29,14 @@ import { Location } from '@/hooks/useLocations';
 import { BundleWithItems } from '@/hooks/useBundles';
 import { InventoryItem as DBInventoryItem } from '@/hooks/useInventoryDB';
 import { format } from 'date-fns';
+
+interface InventoryItemWithBundleId extends InventoryItem {
+  bundleId?: string | null;
+}
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ItemDetailDialogProps {
-  item: InventoryItem | null;
+  item: InventoryItemWithBundleId | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCheckIn: (itemId: string, userName: string) => Promise<boolean> | boolean;
@@ -77,11 +81,14 @@ export function ItemDetailDialog({
 
   if (!item) return null;
 
-  // Find bundles that contain this item
+  // Check if this item IS a bundle (has bundle_id pointing to a bundle)
+  const isBundleItem = !!item.bundleId;
+  
+  // Find bundles that contain this item (item is part of a bundle)
   const itemBundles = bundles.filter(bundle => bundle.items.includes(item.id));
   const isPartOfBundle = itemBundles.length > 0;
   
-  // Get all items in bundles containing this item
+  // Get all items in bundles containing this item (for when item is part of bundle)
   const getBundleItemIds = (): string[] => {
     const allIds = new Set<string>();
     itemBundles.forEach(bundle => {
@@ -90,11 +97,26 @@ export function ItemDetailDialog({
     return Array.from(allIds);
   };
 
-  // Get item names for display
+  // Get items that belong to the bundle (for when this item IS the bundle)
+  const getBundleContentsIds = (): string[] => {
+    if (!isBundleItem || !item.bundleId) return [];
+    const bundle = bundles.find(b => b.id === item.bundleId);
+    return bundle?.items || [];
+  };
+
+  // Get item names for display (when item is part of bundle)
   const getBundleItemNames = (): string[] => {
     const bundleItemIds = getBundleItemIds();
     return items
       .filter(i => bundleItemIds.includes(i.id) && i.id !== item.id)
+      .map(i => i.name);
+  };
+
+  // Get item names for display (when this item IS the bundle)
+  const getBundleContentsNames = (): string[] => {
+    const bundleContentsIds = getBundleContentsIds();
+    return items
+      .filter(i => bundleContentsIds.includes(i.id))
       .map(i => i.name);
   };
 
@@ -104,8 +126,17 @@ export function ItemDetailDialog({
     
     try {
       if (item.status === 'available') {
-        // If part of bundle, pass all bundle item IDs
-        const bundleItemIds = isPartOfBundle ? getBundleItemIds() : undefined;
+        // Determine which item IDs to check out together
+        let bundleItemIds: string[] | undefined;
+        
+        if (isBundleItem) {
+          // This is a bundle item - check out the bundle's contents
+          bundleItemIds = getBundleContentsIds();
+        } else if (isPartOfBundle) {
+          // This item is part of a bundle - check out all bundle items
+          bundleItemIds = getBundleItemIds();
+        }
+        
         await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds);
       } else if (item.status === 'checked-out') {
         await onCheckIn(item.id, selectedUserName.trim());
@@ -184,8 +215,23 @@ export function ItemDetailDialog({
             </span>
           </div>
 
-          {/* Bundle Info */}
-          {isPartOfBundle && (
+          {/* Bundle Info - This IS a bundle */}
+          {isBundleItem && (
+            <div className="p-3 bg-accent/10 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Layers className="h-4 w-4 text-accent" />
+                This is a Bundle
+              </div>
+              {item.status === 'available' && getBundleContentsNames().length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Checking out will also check out: {getBundleContentsNames().join(', ')}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Bundle Info - Part of another bundle */}
+          {isPartOfBundle && !isBundleItem && (
             <div className="p-3 bg-accent/10 rounded-lg space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Layers className="h-4 w-4 text-accent" />

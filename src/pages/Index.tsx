@@ -214,6 +214,7 @@ const Index = () => {
     isConsumable: item.is_consumable || undefined,
     checkedOutBy: item.checked_out_by || undefined,
     checkedOutAt: item.checked_out_at || undefined,
+    bundleId: item.bundle_id || undefined,
     createdAt: item.created_at,
     lastUpdated: item.updated_at,
   });
