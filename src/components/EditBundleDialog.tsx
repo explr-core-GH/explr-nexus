@@ -21,7 +21,7 @@ import { InventoryItem } from '@/hooks/useInventoryDB';
 interface EditBundleDialogProps {
   bundle: BundleWithItems;
   items: InventoryItem[];
-  onUpdateBundle: (id: string, name: string, description: string, itemIds: string[]) => Promise<boolean>;
+  onUpdateBundle: (id: string, name: string, description: string, itemIds: string[], allItems?: InventoryItem[]) => Promise<boolean>;
 }
 
 export function EditBundleDialog({ bundle, items, onUpdateBundle }: EditBundleDialogProps) {
@@ -42,7 +42,10 @@ export function EditBundleDialog({ bundle, items, onUpdateBundle }: EditBundleDi
     }
   }, [open, bundle]);
 
-  const filteredItems = items.filter(
+  // Filter out items that are bundles themselves (have bundle_id)
+  const selectableItems = items.filter(item => !item.bundle_id);
+  
+  const filteredItems = selectableItems.filter(
     item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -62,7 +65,7 @@ export function EditBundleDialog({ bundle, items, onUpdateBundle }: EditBundleDi
 
     setIsSubmitting(true);
     try {
-      const success = await onUpdateBundle(bundle.id, name.trim(), description.trim(), selectedItemIds);
+      const success = await onUpdateBundle(bundle.id, name.trim(), description.trim(), selectedItemIds, selectableItems);
       if (success) {
         setOpen(false);
       }
@@ -71,7 +74,7 @@ export function EditBundleDialog({ bundle, items, onUpdateBundle }: EditBundleDi
     }
   };
 
-  const selectedItems = items.filter(item => selectedItemIds.includes(item.id));
+  const selectedItems = selectableItems.filter(item => selectedItemIds.includes(item.id));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

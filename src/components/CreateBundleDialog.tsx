@@ -19,7 +19,7 @@ import { InventoryItem } from '@/hooks/useInventoryDB';
 
 interface CreateBundleDialogProps {
   items: InventoryItem[];
-  onCreateBundle: (name: string, description: string, itemIds: string[]) => Promise<unknown>;
+  onCreateBundle: (name: string, description: string, itemIds: string[], allItems?: InventoryItem[]) => Promise<unknown>;
   trigger?: React.ReactNode;
 }
 
@@ -41,7 +41,10 @@ export function CreateBundleDialog({ items, onCreateBundle, trigger }: CreateBun
     }
   }, [open]);
 
-  const filteredItems = items.filter(
+  // Filter out items that are bundles themselves (have bundle_id)
+  const selectableItems = items.filter(item => !item.bundle_id);
+  
+  const filteredItems = selectableItems.filter(
     item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -61,14 +64,14 @@ export function CreateBundleDialog({ items, onCreateBundle, trigger }: CreateBun
 
     setIsSubmitting(true);
     try {
-      await onCreateBundle(name.trim(), description.trim(), selectedItemIds);
+      await onCreateBundle(name.trim(), description.trim(), selectedItemIds, items);
       setOpen(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const selectedItems = items.filter(item => selectedItemIds.includes(item.id));
+  const selectedItems = selectableItems.filter(item => selectedItemIds.includes(item.id));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

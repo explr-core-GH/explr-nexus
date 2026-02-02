@@ -71,7 +71,7 @@ export function useBundles() {
     }
   }, [user]);
 
-  const createBundle = async (name: string, description: string, itemIds: string[]) => {
+  const createBundle = async (name: string, description: string, itemIds: string[], allItems?: { id: string; image_url?: string | null; category: string; location: string; location_id?: string | null }[]) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -105,6 +105,49 @@ export function useBundles() {
         if (itemsError) throw itemsError;
       }
 
+      // Get image from first bundled item that has one
+      let bundleImageUrl: string | null = null;
+      let bundleCategory = 'Bundle';
+      let bundleLocation = 'Various';
+      let bundleLocationId: string | null = null;
+      
+      if (allItems && itemIds.length > 0) {
+        const firstItemWithImage = itemIds
+          .map(id => allItems.find(item => item.id === id))
+          .find(item => item?.image_url);
+        
+        if (firstItemWithImage) {
+          bundleImageUrl = firstItemWithImage.image_url || null;
+        }
+        
+        // Use first item's category and location
+        const firstItem = allItems.find(item => item.id === itemIds[0]);
+        if (firstItem) {
+          bundleCategory = firstItem.category;
+          bundleLocation = firstItem.location;
+          bundleLocationId = firstItem.location_id || null;
+        }
+      }
+
+      // Create an inventory item to represent the bundle
+      const { data: inventoryItem, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .insert({
+          name: `📦 ${name}`,
+          description: description || `Bundle containing ${itemIds.length} items`,
+          category: bundleCategory,
+          location: bundleLocation,
+          location_id: bundleLocationId,
+          image_url: bundleImageUrl,
+          qr_code: `BUNDLE-${bundleData.id}`,
+          bundle_id: bundleData.id,
+          status: 'available',
+        })
+        .select()
+        .single();
+
+      if (inventoryError) throw inventoryError;
+
       const newBundle: BundleWithItems = {
         ...bundleData,
         items: itemIds,
@@ -114,7 +157,7 @@ export function useBundles() {
 
       toast({
         title: 'Bundle Created',
-        description: `${name} has been created with ${itemIds.length} items`,
+        description: `${name} has been created with ${itemIds.length} items and added to inventory`,
       });
 
       return newBundle;
@@ -129,7 +172,7 @@ export function useBundles() {
     }
   };
 
-  const updateBundle = async (id: string, name: string, description: string, itemIds: string[]) => {
+  const updateBundle = async (id: string, name: string, description: string, itemIds: string[], allItems?: { id: string; image_url?: string | null; category: string; location: string; location_id?: string | null }[]) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -169,6 +212,43 @@ export function useBundles() {
 
         if (itemsError) throw itemsError;
       }
+
+      // Update the associated inventory item
+      let bundleImageUrl: string | null = null;
+      let bundleCategory = 'Bundle';
+      let bundleLocation = 'Various';
+      let bundleLocationId: string | null = null;
+      
+      if (allItems && itemIds.length > 0) {
+        const firstItemWithImage = itemIds
+          .map(itemId => allItems.find(item => item.id === itemId))
+          .find(item => item?.image_url);
+        
+        if (firstItemWithImage) {
+          bundleImageUrl = firstItemWithImage.image_url || null;
+        }
+        
+        const firstItem = allItems.find(item => item.id === itemIds[0]);
+        if (firstItem) {
+          bundleCategory = firstItem.category;
+          bundleLocation = firstItem.location;
+          bundleLocationId = firstItem.location_id || null;
+        }
+      }
+
+      const { error: inventoryError } = await supabase
+        .from('inventory_items')
+        .update({
+          name: `📦 ${name}`,
+          description: description || `Bundle containing ${itemIds.length} items`,
+          category: bundleCategory,
+          location: bundleLocation,
+          location_id: bundleLocationId,
+          image_url: bundleImageUrl,
+        })
+        .eq('bundle_id', id);
+
+      if (inventoryError) throw inventoryError;
 
       setBundles(prev =>
         prev.map(bundle =>

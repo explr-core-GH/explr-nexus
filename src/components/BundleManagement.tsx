@@ -36,8 +36,8 @@ import { format } from 'date-fns';
 interface BundleManagementProps {
   bundles: BundleWithItems[];
   items: InventoryItem[];
-  onCreateBundle: (name: string, description: string, itemIds: string[]) => Promise<unknown>;
-  onUpdateBundle: (id: string, name: string, description: string, itemIds: string[]) => Promise<boolean>;
+  onCreateBundle: (name: string, description: string, itemIds: string[], allItems?: InventoryItem[]) => Promise<unknown>;
+  onUpdateBundle: (id: string, name: string, description: string, itemIds: string[], allItems?: InventoryItem[]) => Promise<boolean>;
   onDeleteBundle: (id: string) => Promise<boolean>;
 }
 
