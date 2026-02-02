@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +14,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useCategories } from '@/hooks/useCategories';
+import { useLocations } from '@/hooks/useLocations';
 
 interface CSVRow {
   name: string;
@@ -115,6 +117,43 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { categories } = useCategories();
+  const { locations } = useLocations();
+
+  const downloadTemplate = () => {
+    // Create template with headers and example rows
+    const categoryList = categories.map(c => c.name).join(' | ') || 'Electronics | Tools | Other';
+    const locationList = locations.map(l => l.name).join(' | ') || 'Warehouse A | Office B';
+    
+    const templateContent = [
+      'name,category,location,description',
+      '# INSTRUCTIONS: Fill out the template below. Lines starting with # are ignored.',
+      `# Available Categories: ${categoryList}`,
+      `# Available Locations: ${locationList}`,
+      '# Required columns: name, category, location',
+      '# Optional columns: description',
+      '#',
+      '# Example rows (delete these and add your own):',
+      'Power Drill DeWalt,Tools,Warehouse A,Cordless 20V drill',
+      'Safety Helmet,Safety Equipment,Warehouse A,OSHA approved',
+      'Dell Laptop XPS 15,Electronics,Office B,Staff laptop with charger',
+    ].join('\n');
+
+    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'inventory_import_template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Template Downloaded',
+      description: 'Fill out the template and upload it to import items',
+    });
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -308,18 +347,28 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
 
           {/* CSV Format Help */}
           {!parseResult && (
-            <Alert>
-              <FileSpreadsheet className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                <strong>CSV Format:</strong><br />
-                <code className="text-xs bg-muted px-1 rounded">
-                  name,category,location,description
-                </code><br />
-                <code className="text-xs bg-muted px-1 rounded">
-                  Laptop Dell XPS,Electronics,Room 101,Staff laptop
-                </code>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert>
+                <FileSpreadsheet className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>CSV Format:</strong><br />
+                  <code className="text-xs bg-muted px-1 rounded">
+                    name,category,location,description
+                  </code><br />
+                  <code className="text-xs bg-muted px-1 rounded">
+                    Laptop Dell XPS,Electronics,Room 101,Staff laptop
+                  </code>
+                </AlertDescription>
+              </Alert>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2" 
+                onClick={downloadTemplate}
+              >
+                <Download className="h-4 w-4" />
+                Download Template
+              </Button>
+            </div>
           )}
         </div>
 
