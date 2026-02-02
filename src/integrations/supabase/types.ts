@@ -210,6 +210,7 @@ export type Database = {
       }
       item_requests: {
         Row: {
+          admin_proposed_date: string | null
           admin_response: string | null
           confirmed_date: string | null
           created_at: string
@@ -226,6 +227,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_proposed_date?: string | null
           admin_response?: string | null
           confirmed_date?: string | null
           created_at?: string
@@ -242,6 +244,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_proposed_date?: string | null
           admin_response?: string | null
           confirmed_date?: string | null
           created_at?: string

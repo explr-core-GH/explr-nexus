@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon } from 'lucide-react';
+import { Bell, Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,38 +25,63 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useItemRequests, ItemRequest } from '@/hooks/useItemRequests';
 import { format } from 'date-fns';
+import { DateTimePicker } from '@/components/DateTimePicker';
 
 export function AdminNotifications() {
   const { requests, pendingCount, updateRequest, deleteRequest, loading } = useItemRequests();
   const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
-  const [action, setAction] = useState<'approve' | 'deny' | null>(null);
+  const [action, setAction] = useState<'approve' | 'deny' | 'propose' | null>(null);
   const [response, setResponse] = useState('');
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [proposedDate, setProposedDate] = useState<Date | undefined>(undefined);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAction = async () => {
     if (!selectedRequest || !action) return;
 
     setIsProcessing(true);
-    await updateRequest(
-      selectedRequest.id,
-      action === 'approve' ? 'approved' : 'denied',
-      response,
-      action === 'approve' ? selectedDate || undefined : undefined
-    );
+    
+    if (action === 'approve') {
+      await updateRequest(
+        selectedRequest.id,
+        'approved',
+        response,
+        selectedDate || undefined
+      );
+    } else if (action === 'deny') {
+      await updateRequest(
+        selectedRequest.id,
+        'denied',
+        response
+      );
+    } else if (action === 'propose' && proposedDate) {
+      await updateRequest(
+        selectedRequest.id,
+        'pending_confirmation',
+        response,
+        undefined,
+        proposedDate.toISOString()
+      );
+    }
+    
     setSelectedRequest(null);
     setAction(null);
     setResponse('');
     setSelectedDate('');
+    setProposedDate(undefined);
     setIsProcessing(false);
   };
 
-  const openActionDialog = (request: ItemRequest, actionType: 'approve' | 'deny') => {
+  const openActionDialog = (request: ItemRequest, actionType: 'approve' | 'deny' | 'propose') => {
     setSelectedRequest(request);
     setAction(actionType);
-    // Pre-select first date if available
+    // Pre-select first date if available for approval
     if (actionType === 'approve' && request.preferredDates.length > 0) {
       setSelectedDate(request.preferredDates[0]);
+    }
+    // Reset proposed date
+    if (actionType === 'propose') {
+      setProposedDate(undefined);
     }
   };
 
@@ -68,10 +93,14 @@ export function AdminNotifications() {
         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Approved</Badge>;
       case 'denied':
         return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">Denied</Badge>;
+      case 'pending_confirmation':
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Awaiting Confirmation</Badge>;
       default:
         return null;
     }
   };
+
+  const pendingActionCount = requests.filter((r) => r.status === 'pending' || r.status === 'pending_confirmation').length;
 
   return (
     <>
@@ -79,9 +108,9 @@ export function AdminNotifications() {
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="relative text-primary-foreground hover:bg-primary-foreground/10">
             <Bell className="h-5 w-5" />
-            {pendingCount > 0 && (
+            {pendingActionCount > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center animate-pulse">
-                {pendingCount}
+                {pendingActionCount}
               </span>
             )}
           </Button>
@@ -91,8 +120,8 @@ export function AdminNotifications() {
             <SheetTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
               Item Requests
-              {pendingCount > 0 && (
-                <Badge variant="secondary">{pendingCount} pending</Badge>
+              {pendingActionCount > 0 && (
+                <Badge variant="secondary">{pendingActionCount} need attention</Badge>
               )}
             </SheetTitle>
           </SheetHeader>
@@ -158,6 +187,17 @@ export function AdminNotifications() {
                       </div>
                     )}
 
+                    {/* Admin Proposed Date - Waiting for member confirmation */}
+                    {request.status === 'pending_confirmation' && request.adminProposedDate && (
+                      <div className="p-2 bg-blue-500/10 rounded text-sm border-l-2 border-blue-500">
+                        <div className="flex items-center gap-1.5 font-medium text-blue-700 mb-1">
+                          <CalendarPlus className="h-3.5 w-3.5" />
+                          Proposed Pickup (Awaiting Confirmation):
+                        </div>
+                        {format(new Date(request.adminProposedDate), 'EEE, MMM d, yyyy • h:mm a')}
+                      </div>
+                    )}
+
                     {/* Confirmed Date */}
                     {request.confirmedDate && (
                       <div className="p-2 bg-green-500/10 rounded text-sm border-l-2 border-green-500">
@@ -187,23 +227,34 @@ export function AdminNotifications() {
                     )}
 
                     {request.status === 'pending' && (
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          className="flex-1 gap-1"
-                          onClick={() => openActionDialog(request, 'approve')}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          Approve
-                        </Button>
+                      <div className="space-y-2 pt-2">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 gap-1"
+                            onClick={() => openActionDialog(request, 'approve')}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 gap-1 text-destructive hover:text-destructive"
+                            onClick={() => openActionDialog(request, 'deny')}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Deny
+                          </Button>
+                        </div>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 gap-1 text-destructive hover:text-destructive"
-                          onClick={() => openActionDialog(request, 'deny')}
+                          className="w-full gap-1"
+                          onClick={() => openActionDialog(request, 'propose')}
                         >
-                          <X className="h-3.5 w-3.5" />
-                          Deny
+                          <CalendarPlus className="h-3.5 w-3.5" />
+                          Propose Different Date
                         </Button>
                       </div>
                     )}
@@ -220,15 +271,18 @@ export function AdminNotifications() {
         setAction(null);
         setResponse('');
         setSelectedDate('');
+        setProposedDate(undefined);
       }}>
         <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {action === 'approve' ? 'Approve Request' : 'Deny Request'}
+              {action === 'approve' ? 'Approve Request' : action === 'propose' ? 'Propose Different Date' : 'Deny Request'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {action === 'approve'
                 ? `Are you sure you want to approve the request for "${selectedRequest?.itemName}"?`
+                : action === 'propose'
+                ? `Propose a different pickup date for "${selectedRequest?.itemName}". The member will need to confirm.`
                 : `Are you sure you want to deny the request for "${selectedRequest?.itemName}"?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -250,6 +304,18 @@ export function AdminNotifications() {
             </div>
           )}
 
+          {/* Date Picker for Proposing Different Date */}
+          {action === 'propose' && (
+            <div className="space-y-3 py-2">
+              <Label>Select a Date & Time to Propose</Label>
+              <DateTimePicker
+                value={proposedDate}
+                onChange={setProposedDate}
+                placeholder="Select proposed pickup date/time"
+              />
+            </div>
+          )}
+
           <div className="space-y-2 py-2">
             <Label htmlFor="response">Response message (optional)</Label>
             <Textarea
@@ -264,10 +330,14 @@ export function AdminNotifications() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleAction}
-              disabled={isProcessing || (action === 'approve' && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && !selectedDate)}
+              disabled={
+                isProcessing || 
+                (action === 'approve' && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && !selectedDate) ||
+                (action === 'propose' && !proposedDate)
+              }
               className={action === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
-              {action === 'approve' ? 'Approve' : 'Deny'}
+              {action === 'approve' ? 'Approve' : action === 'propose' ? 'Send Proposal' : 'Deny'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
