@@ -16,6 +16,8 @@ export interface InventoryItem {
   checked_out_by: string | null;
   checked_out_at: string | null;
   tags: string[] | null;
+  quantity: number | null;
+  is_consumable: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -97,7 +99,17 @@ export function useInventoryDB() {
     return code;
   };
 
-  const addItem = async (item: { name: string; description: string; category: string; location: string; location_id?: string; image_url?: string; tags?: string[] }) => {
+  const addItem = async (item: { 
+    name: string; 
+    description: string; 
+    category: string; 
+    location: string; 
+    location_id?: string; 
+    image_url?: string; 
+    tags?: string[];
+    quantity?: number;
+    is_consumable?: boolean;
+  }) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -115,6 +127,8 @@ export function useInventoryDB() {
         location: item.location,
         image_url: item.image_url || null,
         tags: item.tags || [],
+        quantity: item.quantity ?? 1,
+        is_consumable: item.is_consumable ?? false,
         qr_code: generateQRCode(),
         status: 'available',
       };
@@ -214,7 +228,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[]) => {
+  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[], quantityToCheckOut: number = 1) => {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
@@ -228,7 +242,74 @@ export function useInventoryDB() {
     }
 
     try {
-      // Update item
+      // Handle consumable items differently
+      if (item.is_consumable) {
+        const currentQuantity = item.quantity ?? 1;
+        const newQuantity = currentQuantity - quantityToCheckOut;
+        
+        if (newQuantity <= 0) {
+          // Delete the item when depleted
+          const { error: deleteError } = await supabase
+            .from('inventory_items')
+            .delete()
+            .eq('id', itemId);
+
+          if (deleteError) throw deleteError;
+
+          // Create activity log for consumption
+          await supabase
+            .from('activity_logs')
+            .insert({
+              item_id: itemId,
+              item_name: item.name,
+              action: 'check-out',
+              performed_by: user.id,
+              performed_by_name: userName,
+            });
+
+          setItems(prev => prev.filter(i => i.id !== itemId));
+          
+          toast({
+            title: 'Item Consumed',
+            description: `${item.name} has been fully consumed and removed from inventory`,
+          });
+        } else {
+          // Decrement quantity
+          const { error: updateError } = await supabase
+            .from('inventory_items')
+            .update({ quantity: newQuantity })
+            .eq('id', itemId);
+
+          if (updateError) throw updateError;
+
+          // Create activity log
+          await supabase
+            .from('activity_logs')
+            .insert({
+              item_id: itemId,
+              item_name: item.name,
+              action: 'check-out',
+              performed_by: user.id,
+              performed_by_name: userName,
+            });
+
+          setItems(prev =>
+            prev.map(i =>
+              i.id === itemId ? { ...i, quantity: newQuantity } : i
+            )
+          );
+
+          toast({
+            title: 'Item Consumed',
+            description: `${quantityToCheckOut} unit(s) of ${item.name} consumed. ${newQuantity} remaining.`,
+          });
+        }
+        
+        await fetchLogs();
+        return true;
+      }
+
+      // Standard check-out for non-consumable items
       const updateData: Record<string, unknown> = {
         status: 'checked-out',
         checked_out_by: user.id,
@@ -437,7 +518,7 @@ export function useInventoryDB() {
     }
   };
 
-  const bulkAddItems = async (itemsToAdd: { name: string; description: string; category: string; location: string; tags?: string[]; image_url?: string }[]) => {
+  const bulkAddItems = async (itemsToAdd: { name: string; description: string; category: string; location: string; tags?: string[]; image_url?: string; quantity?: number; is_consumable?: boolean }[]) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -455,6 +536,8 @@ export function useInventoryDB() {
         location: item.location,
         tags: item.tags || [],
         image_url: item.image_url || null,
+        quantity: item.quantity ?? 1,
+        is_consumable: item.is_consumable ?? false,
         qr_code: generateQRCode(),
         status: 'available',
       }));

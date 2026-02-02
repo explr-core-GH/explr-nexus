@@ -125,7 +125,17 @@ const Index = () => {
 
   const userName = profile?.full_name || 'Unknown User';
 
-  const handleAddItem = async (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string; tags?: string[] }) => {
+  const handleAddItem = async (item: { 
+    name: string; 
+    description: string; 
+    category: string; 
+    location: string; 
+    locationId?: string; 
+    imageUrl?: string; 
+    tags?: string[];
+    quantity?: number;
+    is_consumable?: boolean;
+  }) => {
     await addItem({
       name: item.name,
       description: item.description,
@@ -134,6 +144,8 @@ const Index = () => {
       location_id: item.locationId,
       image_url: item.imageUrl,
       tags: item.tags,
+      quantity: item.quantity,
+      is_consumable: item.is_consumable,
     });
   };
 
@@ -196,6 +208,8 @@ const Index = () => {
     locationId: item.location_id || undefined,
     imageUrl: item.image_url || undefined,
     tags: item.tags || undefined,
+    quantity: item.quantity ?? undefined,
+    isConsumable: item.is_consumable || undefined,
     checkedOutBy: item.checked_out_by || undefined,
     checkedOutAt: item.checked_out_at || undefined,
     createdAt: item.created_at,

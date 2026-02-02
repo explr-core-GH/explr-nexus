@@ -1,6 +1,7 @@
-import { Package, MapPin, User, Clock, QrCode } from 'lucide-react';
+import { Package, MapPin, User, Clock, QrCode, Repeat } from 'lucide-react';
 import { InventoryItem } from '@/types/inventory';
 import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 interface ItemCardProps {
   item: InventoryItem;
@@ -63,9 +64,17 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
               </div>
             </div>
           </div>
-          <span className={`status-pill ${statusClasses[item.status]}`}>
-            {statusLabels[item.status]}
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            <span className={`status-pill ${statusClasses[item.status]}`}>
+              {statusLabels[item.status]}
+            </span>
+            {item.isConsumable && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <Repeat className="h-3 w-3" />
+                Qty: {item.quantity ?? 1}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 

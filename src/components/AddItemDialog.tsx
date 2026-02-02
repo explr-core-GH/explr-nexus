@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,17 @@ import { Location } from '@/hooks/useLocations';
 import { useCategories } from '@/hooks/useCategories';
 
 interface AddItemDialogProps {
-  onAdd: (item: { name: string; description: string; category: string; location: string; locationId?: string; imageUrl?: string; tags?: string[] }) => void;
+  onAdd: (item: { 
+    name: string; 
+    description: string; 
+    category: string; 
+    location: string; 
+    locationId?: string; 
+    imageUrl?: string; 
+    tags?: string[];
+    quantity?: number;
+    is_consumable?: boolean;
+  }) => void;
   locations: Location[];
 }
 
@@ -38,6 +49,8 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
   const [locationId, setLocationId] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [isConsumable, setIsConsumable] = useState(false);
   const { categories, isLoading: categoriesLoading } = useCategories();
 
   const selectedLocation = locations.find(l => l.id === locationId);
@@ -54,6 +67,8 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
       locationId,
       imageUrl: imageUrl || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      quantity: quantity > 0 ? quantity : 1,
+      is_consumable: isConsumable,
     });
 
     setName('');
@@ -62,6 +77,8 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
     setLocationId('');
     setImageUrl(null);
     setTags([]);
+    setQuantity(1);
+    setIsConsumable(false);
     setOpen(false);
   };
 
@@ -147,6 +164,37 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
               Select which member groups can see this item
             </p>
             <TagsCheckboxGroup selectedTags={tags} onTagsChange={setTags} />
+          </div>
+          {/* Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Quantity</Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              placeholder="1"
+            />
+          </div>
+          {/* Consumable checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="consumable"
+              checked={isConsumable}
+              onCheckedChange={(checked) => setIsConsumable(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="consumable"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Consumable Item
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                When checked out, quantity decreases. Item is removed when depleted.
+              </p>
+            </div>
           </div>
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>

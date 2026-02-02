@@ -25,6 +25,8 @@ interface CSVRow {
   location: string;
   tags?: string[];
   image_url?: string;
+  quantity?: number;
+  is_consumable?: boolean;
 }
 
 interface ParseResult {
@@ -37,7 +39,7 @@ interface CSVImportDialogProps {
 }
 
 const REQUIRED_COLUMNS = ['name', 'category', 'location'];
-const OPTIONAL_COLUMNS = ['description', 'tags', 'image_url'];
+const OPTIONAL_COLUMNS = ['description', 'tags', 'image_url', 'quantity', 'is_consumable'];
 
 function parseCSV(content: string): ParseResult {
   const lines = content.split(/\r?\n/).filter(line => line.trim());
@@ -108,6 +110,16 @@ function parseCSV(content: string): ParseResult {
       ? tagsValue.split(';').map(t => t.trim()).filter(t => t.length > 0)
       : undefined;
 
+    // Parse quantity
+    const quantityValue = row.quantity?.trim();
+    const parsedQuantity = quantityValue ? parseInt(quantityValue, 10) : undefined;
+
+    // Parse is_consumable (accepts true/false, yes/no, 1/0)
+    const consumableValue = row.is_consumable?.trim().toLowerCase();
+    const parsedConsumable = consumableValue 
+      ? ['true', 'yes', '1'].includes(consumableValue)
+      : undefined;
+
     valid.push({
       name: row.name.trim(),
       description: row.description?.trim() || '',
@@ -115,6 +127,8 @@ function parseCSV(content: string): ParseResult {
       location: row.location.trim(),
       tags: parsedTags,
       image_url: row.image_url?.trim() || undefined,
+      quantity: parsedQuantity,
+      is_consumable: parsedConsumable,
     });
   }
 
@@ -138,7 +152,7 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
     const tagsList = VISIBILITY_TAGS.join(' | ');
     
     const templateContent = [
-      'name,category,location,description,tags,image_url',
+      'name,category,location,description,tags,image_url,quantity,is_consumable',
       '# ============================================',
       '# INVENTORY IMPORT TEMPLATE',
       '# ============================================',
@@ -155,6 +169,8 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
       '# - description (optional): Brief description of the item',
       '# - tags (optional): Visibility tags separated by semicolons (;)',
       '# - image_url (optional): URL to an image (must be publicly accessible)',
+      '# - quantity (optional): Number of units (default: 1)',
+      '# - is_consumable (optional): true/false - if true, checking out decreases quantity',
       '#',
       `# AVAILABLE CATEGORIES: ${categoryList}`,
       `# AVAILABLE LOCATIONS: ${locationList}`,
@@ -166,10 +182,11 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
       '# ============================================',
       '# EXAMPLE DATA (delete these rows and add your own):',
       '# ============================================',
-      'Power Drill DeWalt,Tools,Warehouse A,Cordless 20V drill with battery,FTC;All,',
-      'Safety Helmet,Safety Equipment,Warehouse A,OSHA approved hard hat,All,https://example.com/helmet.jpg',
-      'Dell Laptop XPS 15,Electronics,Office B,Staff laptop with charger,CS;Nonprofit,',
-      'Arduino Mega Kit,Electronics,Warehouse A,Complete robotics starter kit,FTC;FRC;FLL,',
+      'Power Drill DeWalt,Tools,Warehouse A,Cordless 20V drill with battery,FTC;All,,1,false',
+      'Safety Helmet,Safety Equipment,Warehouse A,OSHA approved hard hat,All,https://example.com/helmet.jpg,10,true',
+      'Dell Laptop XPS 15,Electronics,Office B,Staff laptop with charger,CS;Nonprofit,,1,false',
+      'Arduino Mega Kit,Electronics,Warehouse A,Complete robotics starter kit,FTC;FRC;FLL,,5,false',
+      'USB-C Cables,Electronics,Warehouse A,Braided 6ft cables,All,,50,true',
     ].join('\n');
 
     const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
