@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { 
   Users, 
@@ -13,7 +13,8 @@ import {
   Eye,
   UserCheck,
   Tags,
-  BookOpen
+  BookOpen,
+  FolderOpen
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ import { LocationsMap } from '@/components/LocationsMap';
 import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { ResourceManagement } from '@/components/ResourceManagement';
+import { CategoryManagement } from '@/components/CategoryManagement';
 import { format } from 'date-fns';
 
 const Admin = () => {
@@ -94,6 +96,15 @@ const Admin = () => {
     setSelectedLocationItems(locationItems);
     setLocationDialogOpen(true);
   };
+
+  // Calculate item counts by category
+  const itemCountsByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    items.forEach(item => {
+      counts[item.category] = (counts[item.category] || 0) + 1;
+    });
+    return counts;
+  }, [items]);
 
   const isLoading = authLoading || usersLoading || locationsLoading || itemsLoading;
 
@@ -137,7 +148,7 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Users
@@ -145,6 +156,10 @@ const Admin = () => {
             <TabsTrigger value="locations" className="gap-2">
               <MapPin className="h-4 w-4" />
               Locations
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Categories
             </TabsTrigger>
             <TabsTrigger value="resources" className="gap-2">
               <BookOpen className="h-4 w-4" />
@@ -521,6 +536,11 @@ const Admin = () => {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Categories Tab */}
+          <TabsContent value="categories" className="space-y-6 mt-6">
+            <CategoryManagement itemCounts={itemCountsByCategory} />
           </TabsContent>
 
           {/* Resources Tab */}

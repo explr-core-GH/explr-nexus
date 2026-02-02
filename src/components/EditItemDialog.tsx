@@ -25,6 +25,7 @@ import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { Location } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
+import { useCategories } from '@/hooks/useCategories';
 
 interface EditItemDialogProps {
   item: {
@@ -54,16 +55,6 @@ interface EditItemDialogProps {
   trigger?: React.ReactNode;
 }
 
-const CATEGORIES = [
-  'Electronics',
-  'Tools',
-  'Safety Equipment',
-  'Vehicles',
-  'Furniture',
-  'Office Supplies',
-  'Other',
-];
-
 export function EditItemDialog({ item, locations = [], users = [], onUpdate, trigger }: EditItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(item.name);
@@ -76,6 +67,7 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
   const [assignedToName, setAssignedToName] = useState<string>(item.checkedOutBy || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { categories, isLoading: categoriesLoading } = useCategories();
 
   // Reset form when item changes
   useEffect(() => {
@@ -182,16 +174,22 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-category">Category *</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select value={category} onValueChange={setCategory} required disabled={categoriesLoading}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select category"} />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>
+                    {cat.name}
                   </SelectItem>
                 ))}
+                {/* Include current category if not in list (legacy support) */}
+                {category && !categories.find(c => c.name === category) && (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
