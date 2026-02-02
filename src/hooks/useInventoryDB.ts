@@ -437,7 +437,7 @@ export function useInventoryDB() {
     }
   };
 
-  const bulkAddItems = async (itemsToAdd: { name: string; description: string; category: string; location: string }[]) => {
+  const bulkAddItems = async (itemsToAdd: { name: string; description: string; category: string; location: string; tags?: string[]; image_url?: string }[]) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -449,7 +449,12 @@ export function useInventoryDB() {
 
     try {
       const newItems = itemsToAdd.map(item => ({
-        ...item,
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        location: item.location,
+        tags: item.tags || [],
+        image_url: item.image_url || null,
         qr_code: generateQRCode(),
         status: 'available',
       }));

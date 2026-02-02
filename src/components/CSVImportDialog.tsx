@@ -16,12 +16,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/useCategories';
 import { useLocations } from '@/hooks/useLocations';
+import { VISIBILITY_TAGS } from '@/constants/tags';
 
 interface CSVRow {
   name: string;
   description: string;
   category: string;
   location: string;
+  tags?: string[];
+  image_url?: string;
 }
 
 interface ParseResult {
@@ -34,7 +37,7 @@ interface CSVImportDialogProps {
 }
 
 const REQUIRED_COLUMNS = ['name', 'category', 'location'];
-const OPTIONAL_COLUMNS = ['description'];
+const OPTIONAL_COLUMNS = ['description', 'tags', 'image_url'];
 
 function parseCSV(content: string): ParseResult {
   const lines = content.split(/\r?\n/).filter(line => line.trim());
@@ -99,11 +102,19 @@ function parseCSV(content: string): ParseResult {
       continue;
     }
 
+    // Parse tags if present (semicolon-separated)
+    const tagsValue = row.tags?.trim();
+    const parsedTags = tagsValue 
+      ? tagsValue.split(';').map(t => t.trim()).filter(t => t.length > 0)
+      : undefined;
+
     valid.push({
       name: row.name.trim(),
       description: row.description?.trim() || '',
       category: row.category.trim(),
       location: row.location.trim(),
+      tags: parsedTags,
+      image_url: row.image_url?.trim() || undefined,
     });
   }
 
@@ -124,19 +135,41 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
     // Create template with headers and example rows
     const categoryList = categories.map(c => c.name).join(' | ') || 'Electronics | Tools | Other';
     const locationList = locations.map(l => l.name).join(' | ') || 'Warehouse A | Office B';
+    const tagsList = VISIBILITY_TAGS.join(' | ');
     
     const templateContent = [
-      'name,category,location,description',
-      '# INSTRUCTIONS: Fill out the template below. Lines starting with # are ignored.',
-      `# Available Categories: ${categoryList}`,
-      `# Available Locations: ${locationList}`,
-      '# Required columns: name, category, location',
-      '# Optional columns: description',
+      'name,category,location,description,tags,image_url',
+      '# ============================================',
+      '# INVENTORY IMPORT TEMPLATE',
+      '# ============================================',
       '#',
-      '# Example rows (delete these and add your own):',
-      'Power Drill DeWalt,Tools,Warehouse A,Cordless 20V drill',
-      'Safety Helmet,Safety Equipment,Warehouse A,OSHA approved',
-      'Dell Laptop XPS 15,Electronics,Office B,Staff laptop with charger',
+      '# INSTRUCTIONS:',
+      '# - Fill out the data rows below (delete example rows first)',
+      '# - Lines starting with # are comments and will be ignored',
+      '# - Save this file as CSV before uploading',
+      '#',
+      '# COLUMN DEFINITIONS:',
+      '# - name (REQUIRED): Item name',
+      '# - category (REQUIRED): Must match an existing category',
+      '# - location (REQUIRED): Must match an existing location name',
+      '# - description (optional): Brief description of the item',
+      '# - tags (optional): Visibility tags separated by semicolons (;)',
+      '# - image_url (optional): URL to an image (must be publicly accessible)',
+      '#',
+      `# AVAILABLE CATEGORIES: ${categoryList}`,
+      `# AVAILABLE LOCATIONS: ${locationList}`,
+      `# AVAILABLE TAGS: ${tagsList}`,
+      '#',
+      '# NOTE: Photos cannot be uploaded via CSV. After import, edit each item',
+      '# to upload photos directly, or provide public image URLs in the image_url column.',
+      '#',
+      '# ============================================',
+      '# EXAMPLE DATA (delete these rows and add your own):',
+      '# ============================================',
+      'Power Drill DeWalt,Tools,Warehouse A,Cordless 20V drill with battery,FTC;All,',
+      'Safety Helmet,Safety Equipment,Warehouse A,OSHA approved hard hat,All,https://example.com/helmet.jpg',
+      'Dell Laptop XPS 15,Electronics,Office B,Staff laptop with charger,CS;Nonprofit,',
+      'Arduino Mega Kit,Electronics,Warehouse A,Complete robotics starter kit,FTC;FRC;FLL,',
     ].join('\n');
 
     const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
@@ -236,9 +269,19 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
             Import Inventory from CSV
           </DialogTitle>
           <DialogDescription>
-            Upload a CSV file with columns: name, category, location, description (optional)
+            Upload a CSV file to bulk import inventory items. Download the template first.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Always visible download template button */}
+        <Button 
+          variant="outline" 
+          className="w-full gap-2" 
+          onClick={downloadTemplate}
+        >
+          <Download className="h-4 w-4" />
+          Download Template
+        </Button>
 
         <div className="space-y-4">
           {/* File Input */}
@@ -347,28 +390,16 @@ export function CSVImportDialog({ onImport }: CSVImportDialogProps) {
 
           {/* CSV Format Help */}
           {!parseResult && (
-            <div className="space-y-3">
-              <Alert>
-                <FileSpreadsheet className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  <strong>CSV Format:</strong><br />
-                  <code className="text-xs bg-muted px-1 rounded">
-                    name,category,location,description
-                  </code><br />
-                  <code className="text-xs bg-muted px-1 rounded">
-                    Laptop Dell XPS,Electronics,Room 101,Staff laptop
-                  </code>
-                </AlertDescription>
-              </Alert>
-              <Button 
-                variant="outline" 
-                className="w-full gap-2" 
-                onClick={downloadTemplate}
-              >
-                <Download className="h-4 w-4" />
-                Download Template
-              </Button>
-            </div>
+            <Alert>
+              <FileSpreadsheet className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                <strong>Required:</strong> name, category, location<br />
+                <strong>Optional:</strong> description, tags (semicolon-separated), image_url<br />
+                <span className="text-muted-foreground text-xs">
+                  Note: To upload photos directly, edit items after import.
+                </span>
+              </AlertDescription>
+            </Alert>
           )}
         </div>
 
