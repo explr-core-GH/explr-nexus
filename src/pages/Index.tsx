@@ -22,6 +22,7 @@ import {
 import { useInventoryDB, InventoryItem } from '@/hooks/useInventoryDB';
 import { useLocations } from '@/hooks/useLocations';
 import { useSelectableUsers } from '@/hooks/useSelectableUsers';
+import { useBundles } from '@/hooks/useBundles';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatsCard } from '@/components/StatsCard';
 import { ItemCard } from '@/components/ItemCard';
@@ -54,6 +55,7 @@ const Index = () => {
   
   const { locations } = useLocations();
   const { users: selectableUsers } = useSelectableUsers();
+  const { bundles, getItemBundles } = useBundles();
   const { profile, canCheckInOut, userRole, userTags } = useAuth();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,8 +166,8 @@ const Index = () => {
     return result;
   };
 
-  const handleCheckOut = async (itemId: string, selectedUserName: string, locationId?: string) => {
-    const result = await checkOut(itemId, selectedUserName, locationId, locations);
+  const handleCheckOut = async (itemId: string, selectedUserName: string, locationId?: string, bundleItemIds?: string[]) => {
+    const result = await checkOut(itemId, selectedUserName, locationId, locations, 1, bundleItemIds);
     if (result && scannedItem) {
       const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
       setScannedItem({ 
@@ -387,13 +389,15 @@ const Index = () => {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onCheckIn={(itemId, selectedUserName) => checkIn(itemId, selectedUserName)}
-        onCheckOut={(itemId, selectedUserName) => checkOut(itemId, selectedUserName)}
+        onCheckOut={(itemId, selectedUserName, bundleItemIds) => checkOut(itemId, selectedUserName, undefined, locations, 1, bundleItemIds)}
         onDelete={handleDelete}
         onUpdate={updateItem}
         locations={locations}
         users={selectableUsers}
         isAdmin={isAdmin}
         canCheckInOut={canCheckInOut}
+        bundles={bundles}
+        items={items}
       />
 
       {/* QR Scanner */}

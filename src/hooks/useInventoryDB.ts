@@ -228,7 +228,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[], quantityToCheckOut: number = 1) => {
+  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[]) => {
     if (!user) return false;
     
     const item = items.find(i => i.id === itemId);
@@ -242,6 +242,72 @@ export function useInventoryDB() {
     }
 
     try {
+      // If bundleItemIds provided, check out all bundle items together
+      if (bundleItemIds && bundleItemIds.length > 0) {
+        const allItemIds = [itemId, ...bundleItemIds.filter(id => id !== itemId)];
+        const availableItems = items.filter(i => allItemIds.includes(i.id) && i.status === 'available');
+        
+        if (availableItems.length < allItemIds.length) {
+          const unavailableItems = items.filter(i => allItemIds.includes(i.id) && i.status !== 'available');
+          toast({
+            title: 'Cannot Check Out Bundle',
+            description: `Some items are not available: ${unavailableItems.map(i => i.name).join(', ')}`,
+            variant: 'destructive',
+          });
+          return false;
+        }
+
+        // Build update data
+        const updateData: Record<string, unknown> = {
+          status: 'checked-out',
+          checked_out_by: user.id,
+          checked_out_at: new Date().toISOString(),
+        };
+        if (newLocationId && locations) {
+          const newLocation = locations.find(l => l.id === newLocationId);
+          if (newLocation) {
+            updateData.location = newLocation.name;
+            updateData.location_id = newLocationId;
+          }
+        }
+
+        // Update all items in the bundle
+        const { error: updateError } = await supabase
+          .from('inventory_items')
+          .update(updateData)
+          .in('id', allItemIds);
+
+        if (updateError) throw updateError;
+
+        // Create activity logs for all items
+        const logEntries = availableItems.map(i => ({
+          item_id: i.id,
+          item_name: i.name,
+          action: 'check-out',
+          performed_by: user.id,
+          performed_by_name: userName,
+        }));
+
+        await supabase.from('activity_logs').insert(logEntries);
+
+        // Update local state
+        const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
+        setItems(prev =>
+          prev.map(i =>
+            allItemIds.includes(i.id)
+              ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+              : i
+          )
+        );
+
+        await fetchLogs();
+        toast({
+          title: 'Bundle Checked Out',
+          description: `${availableItems.length} items have been checked out`,
+        });
+        return true;
+      }
+
       // Handle consumable items differently
       if (item.is_consumable) {
         const currentQuantity = item.quantity ?? 1;

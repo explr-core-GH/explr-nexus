@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil } from 'lucide-react';
+import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,8 @@ import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { RequestItemButton } from '@/components/RequestItemButton';
 import { InventoryItem } from '@/types/inventory';
 import { Location } from '@/hooks/useLocations';
+import { BundleWithItems } from '@/hooks/useBundles';
+import { InventoryItem as DBInventoryItem } from '@/hooks/useInventoryDB';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -33,7 +36,7 @@ interface ItemDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCheckIn: (itemId: string, userName: string) => Promise<boolean> | boolean;
-  onCheckOut: (itemId: string, userName: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, userName: string, bundleItemIds?: string[]) => Promise<boolean> | boolean;
   onDelete: (itemId: string) => Promise<void> | void;
   onUpdate?: (id: string, updates: {
     name: string;
@@ -47,6 +50,8 @@ interface ItemDetailDialogProps {
   users?: SelectableUser[];
   isAdmin?: boolean;
   canCheckInOut?: boolean;
+  bundles?: BundleWithItems[];
+  items?: DBInventoryItem[];
 }
 
 export function ItemDetailDialog({
@@ -61,6 +66,8 @@ export function ItemDetailDialog({
   users = [],
   isAdmin = false,
   canCheckInOut = true,
+  bundles = [],
+  items = [],
 }: ItemDetailDialogProps) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedUserName, setSelectedUserName] = useState('');
@@ -70,13 +77,36 @@ export function ItemDetailDialog({
 
   if (!item) return null;
 
+  // Find bundles that contain this item
+  const itemBundles = bundles.filter(bundle => bundle.items.includes(item.id));
+  const isPartOfBundle = itemBundles.length > 0;
+  
+  // Get all items in bundles containing this item
+  const getBundleItemIds = (): string[] => {
+    const allIds = new Set<string>();
+    itemBundles.forEach(bundle => {
+      bundle.items.forEach(id => allIds.add(id));
+    });
+    return Array.from(allIds);
+  };
+
+  // Get item names for display
+  const getBundleItemNames = (): string[] => {
+    const bundleItemIds = getBundleItemIds();
+    return items
+      .filter(i => bundleItemIds.includes(i.id) && i.id !== item.id)
+      .map(i => i.name);
+  };
+
   const handleAction = async () => {
     if (!selectedUserName.trim()) return;
     setIsLoading(true);
     
     try {
       if (item.status === 'available') {
-        await onCheckOut(item.id, selectedUserName.trim());
+        // If part of bundle, pass all bundle item IDs
+        const bundleItemIds = isPartOfBundle ? getBundleItemIds() : undefined;
+        await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds);
       } else if (item.status === 'checked-out') {
         await onCheckIn(item.id, selectedUserName.trim());
       }
@@ -153,6 +183,21 @@ export function ItemDetailDialog({
               {item.location}
             </span>
           </div>
+
+          {/* Bundle Info */}
+          {isPartOfBundle && (
+            <div className="p-3 bg-accent/10 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Layers className="h-4 w-4 text-accent" />
+                Part of Bundle: {itemBundles.map(b => b.name).join(', ')}
+              </div>
+              {item.status === 'available' && (
+                <div className="text-xs text-muted-foreground">
+                  Checking out will also check out: {getBundleItemNames().join(', ')}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* QR Code */}
           <QRCodeDisplay value={item.qrCode} itemName={item.name} size={160} />

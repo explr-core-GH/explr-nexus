@@ -14,7 +14,8 @@ import {
   UserCheck,
   Tags,
   BookOpen,
-  FolderOpen
+  FolderOpen,
+  Package
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,8 @@ import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { ResourceManagement } from '@/components/ResourceManagement';
 import { CategoryManagement } from '@/components/CategoryManagement';
+import { BundleManagement } from '@/components/BundleManagement';
+import { useBundles } from '@/hooks/useBundles';
 import { format } from 'date-fns';
 
 const Admin = () => {
@@ -65,6 +68,7 @@ const Admin = () => {
   const { users, isLoading: usersLoading, setUserRole, updateUserTags, deleteUser } = useUserManagement();
   const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
   const { items, isLoading: itemsLoading } = useInventoryDB();
+  const { bundles, isLoading: bundlesLoading, createBundle, updateBundle, deleteBundle } = useBundles();
   const [searchQuery, setSearchQuery] = useState('');
   const [locationSearchQuery, setLocationSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -106,7 +110,7 @@ const Admin = () => {
     return counts;
   }, [items]);
 
-  const isLoading = authLoading || usersLoading || locationsLoading || itemsLoading;
+  const isLoading = authLoading || usersLoading || locationsLoading || itemsLoading || bundlesLoading;
 
   if (isLoading) {
     return (
@@ -148,22 +152,26 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
-              Users
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
             <TabsTrigger value="locations" className="gap-2">
               <MapPin className="h-4 w-4" />
-              Locations
+              <span className="hidden sm:inline">Locations</span>
+            </TabsTrigger>
+            <TabsTrigger value="bundles" className="gap-2">
+              <Package className="h-4 w-4" />
+              <span className="hidden sm:inline">Bundles</span>
             </TabsTrigger>
             <TabsTrigger value="categories" className="gap-2">
               <FolderOpen className="h-4 w-4" />
-              Categories
+              <span className="hidden sm:inline">Categories</span>
             </TabsTrigger>
             <TabsTrigger value="resources" className="gap-2">
               <BookOpen className="h-4 w-4" />
-              Resources
+              <span className="hidden sm:inline">Resources</span>
             </TabsTrigger>
           </TabsList>
 
@@ -536,6 +544,17 @@ const Admin = () => {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Bundles Tab */}
+          <TabsContent value="bundles" className="space-y-6 mt-6">
+            <BundleManagement
+              bundles={bundles}
+              items={items}
+              onCreateBundle={createBundle}
+              onUpdateBundle={updateBundle}
+              onDeleteBundle={deleteBundle}
+            />
           </TabsContent>
 
           {/* Categories Tab */}
