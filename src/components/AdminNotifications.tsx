@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Bell, Check, X, Mail, Building, Clock, MessageSquare } from 'lucide-react';
+import { Bell, Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Sheet,
   SheetContent,
@@ -30,17 +31,33 @@ export function AdminNotifications() {
   const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
   const [action, setAction] = useState<'approve' | 'deny' | null>(null);
   const [response, setResponse] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAction = async () => {
     if (!selectedRequest || !action) return;
 
     setIsProcessing(true);
-    await updateRequest(selectedRequest.id, action === 'approve' ? 'approved' : 'denied', response);
+    await updateRequest(
+      selectedRequest.id,
+      action === 'approve' ? 'approved' : 'denied',
+      response,
+      action === 'approve' ? selectedDate || undefined : undefined
+    );
     setSelectedRequest(null);
     setAction(null);
     setResponse('');
+    setSelectedDate('');
     setIsProcessing(false);
+  };
+
+  const openActionDialog = (request: ItemRequest, actionType: 'approve' | 'deny') => {
+    setSelectedRequest(request);
+    setAction(actionType);
+    // Pre-select first date if available
+    if (actionType === 'approve' && request.preferredDates.length > 0) {
+      setSelectedDate(request.preferredDates[0]);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -124,6 +141,34 @@ export function AdminNotifications() {
                       </div>
                     </div>
 
+                    {/* Preferred Pickup Dates */}
+                    {request.preferredDates.length > 0 && (
+                      <div className="p-2 bg-accent/30 rounded text-sm">
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                          <CalendarIcon className="h-3.5 w-3.5" />
+                          Preferred Pickup Times:
+                        </div>
+                        <ul className="space-y-1 pl-5">
+                          {request.preferredDates.map((date, idx) => (
+                            <li key={idx} className="list-disc">
+                              {format(new Date(date), 'EEE, MMM d, yyyy • h:mm a')}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Confirmed Date */}
+                    {request.confirmedDate && (
+                      <div className="p-2 bg-green-500/10 rounded text-sm border-l-2 border-green-500">
+                        <div className="flex items-center gap-1.5 font-medium text-green-700 mb-1">
+                          <Check className="h-3.5 w-3.5" />
+                          Confirmed Pickup:
+                        </div>
+                        {format(new Date(request.confirmedDate), 'EEE, MMM d, yyyy • h:mm a')}
+                      </div>
+                    )}
+
                     {request.message && (
                       <div className="p-2 bg-secondary/50 rounded text-sm">
                         <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
@@ -146,10 +191,7 @@ export function AdminNotifications() {
                         <Button
                           size="sm"
                           className="flex-1 gap-1"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setAction('approve');
-                          }}
+                          onClick={() => openActionDialog(request, 'approve')}
                         >
                           <Check className="h-3.5 w-3.5" />
                           Approve
@@ -158,10 +200,7 @@ export function AdminNotifications() {
                           size="sm"
                           variant="outline"
                           className="flex-1 gap-1 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setAction('deny');
-                          }}
+                          onClick={() => openActionDialog(request, 'deny')}
                         >
                           <X className="h-3.5 w-3.5" />
                           Deny
@@ -180,8 +219,9 @@ export function AdminNotifications() {
         setSelectedRequest(null);
         setAction(null);
         setResponse('');
+        setSelectedDate('');
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {action === 'approve' ? 'Approve Request' : 'Deny Request'}
@@ -192,6 +232,24 @@ export function AdminNotifications() {
                 : `Are you sure you want to deny the request for "${selectedRequest?.itemName}"?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* Date Selection for Approval */}
+          {action === 'approve' && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && (
+            <div className="space-y-3 py-2">
+              <Label>Select Pickup Date & Time</Label>
+              <RadioGroup value={selectedDate} onValueChange={setSelectedDate}>
+                {selectedRequest.preferredDates.map((date, idx) => (
+                  <div key={idx} className="flex items-center space-x-2">
+                    <RadioGroupItem value={date} id={`date-${idx}`} />
+                    <Label htmlFor={`date-${idx}`} className="font-normal cursor-pointer">
+                      {format(new Date(date), 'EEE, MMM d, yyyy • h:mm a')}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          )}
+
           <div className="space-y-2 py-2">
             <Label htmlFor="response">Response message (optional)</Label>
             <Textarea
@@ -206,7 +264,7 @@ export function AdminNotifications() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleAction}
-              disabled={isProcessing}
+              disabled={isProcessing || (action === 'approve' && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && !selectedDate)}
               className={action === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
               {action === 'approve' ? 'Approve' : 'Deny'}

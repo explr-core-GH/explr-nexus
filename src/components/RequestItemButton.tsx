@@ -11,6 +11,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { PreferredDatesPicker } from '@/components/DateTimePicker';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { useAuth } from '@/contexts/AuthContext';
 import { InventoryItem } from '@/types/inventory';
@@ -22,6 +23,7 @@ interface RequestItemButtonProps {
 export function RequestItemButton({ item }: RequestItemButtonProps) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [preferredDates, setPreferredDates] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { createRequest } = useItemRequests();
   const { profile } = useAuth();
@@ -36,11 +38,13 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
       profile.full_name,
       profile.email || null,
       profile.organization_name || null,
-      message
+      message,
+      preferredDates.length > 0 ? preferredDates : undefined
     );
 
     if (success) {
       setMessage('');
+      setPreferredDates([]);
       setOpen(false);
     }
     setIsLoading(false);
@@ -54,7 +58,7 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
           Request Item
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Request Item</DialogTitle>
         </DialogHeader>
@@ -63,6 +67,16 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
             <p className="font-medium">{item.name}</p>
             <p className="text-sm text-muted-foreground">{item.description}</p>
           </div>
+
+          <div className="space-y-2">
+            <Label>Preferred Pickup Dates & Times</Label>
+            <PreferredDatesPicker
+              dates={preferredDates}
+              onChange={setPreferredDates}
+              maxDates={3}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="message">Message (optional)</Label>
             <Textarea
