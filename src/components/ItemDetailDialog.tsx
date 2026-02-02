@@ -129,27 +129,14 @@ export function ItemDetailDialog({
         // Determine which item IDs to check out together
         let bundleItemIds: string[] | undefined;
         
-        console.log('Checkout debug:', {
-          itemId: item.id,
-          itemName: item.name,
-          bundleId: item.bundleId,
-          isBundleItem,
-          isPartOfBundle,
-          bundlesCount: bundles.length,
-          bundles: bundles.map(b => ({ id: b.id, name: b.name, items: b.items })),
-        });
-        
         if (isBundleItem) {
           // This is a bundle item - check out the bundle's contents
           bundleItemIds = getBundleContentsIds();
-          console.log('Bundle contents IDs:', bundleItemIds);
         } else if (isPartOfBundle) {
           // This item is part of a bundle - check out all bundle items
           bundleItemIds = getBundleItemIds();
-          console.log('Part of bundle IDs:', bundleItemIds);
         }
         
-        console.log('Calling onCheckOut with bundleItemIds:', bundleItemIds);
         await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds);
       } else if (item.status === 'checked-out') {
         await onCheckIn(item.id, selectedUserName.trim());
