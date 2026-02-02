@@ -11,10 +11,11 @@ export interface ItemRequest {
   requesterEmail: string | null;
   requesterOrganization: string | null;
   message: string | null;
-  status: 'pending' | 'approved' | 'denied';
+  status: 'pending' | 'approved' | 'denied' | 'pending_confirmation';
   adminResponse: string | null;
   preferredDates: string[];
   confirmedDate: string | null;
+  adminProposedDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,10 +44,11 @@ export function useItemRequests() {
         requesterEmail: r.requester_email,
         requesterOrganization: r.requester_organization,
         message: r.message,
-        status: r.status as 'pending' | 'approved' | 'denied',
+        status: r.status as 'pending' | 'approved' | 'denied' | 'pending_confirmation',
         adminResponse: r.admin_response,
         preferredDates: (r.preferred_dates as string[]) || [],
         confirmedDate: r.confirmed_date,
+        adminProposedDate: r.admin_proposed_date,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
@@ -106,9 +108,10 @@ export function useItemRequests() {
 
   const updateRequest = async (
     requestId: string,
-    status: 'approved' | 'denied',
+    status: 'approved' | 'denied' | 'pending_confirmation',
     adminResponse?: string,
-    confirmedDate?: string
+    confirmedDate?: string,
+    adminProposedDate?: string
   ): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -117,20 +120,77 @@ export function useItemRequests() {
           status,
           admin_response: adminResponse || null,
           confirmed_date: confirmedDate || null,
+          admin_proposed_date: adminProposedDate || null,
         })
         .eq('id', requestId);
 
       if (error) throw error;
 
-      toast({
-        title: status === 'approved' ? 'Request Approved' : 'Request Denied',
-        description: `The request has been ${status}.`,
-      });
+      const statusMessages: Record<string, { title: string; description: string }> = {
+        approved: { title: 'Request Approved', description: 'The request has been approved.' },
+        denied: { title: 'Request Denied', description: 'The request has been denied.' },
+        pending_confirmation: { title: 'Date Proposed', description: 'A new date has been proposed to the requester.' },
+      };
+
+      toast(statusMessages[status]);
 
       await fetchRequests();
       return true;
     } catch (error: any) {
       console.error('Error updating request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update request. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const confirmProposedDate = async (requestId: string, accept: boolean): Promise<boolean> => {
+    try {
+      if (accept) {
+        // Get the request to copy the proposed date to confirmed date
+        const request = requests.find(r => r.id === requestId);
+        if (!request?.adminProposedDate) throw new Error('No proposed date found');
+
+        const { error } = await supabase
+          .from('item_requests')
+          .update({
+            status: 'approved',
+            confirmed_date: request.adminProposedDate,
+            admin_proposed_date: null,
+          })
+          .eq('id', requestId);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Date Confirmed',
+          description: 'You have confirmed the proposed pickup date.',
+        });
+      } else {
+        // Member rejects the proposed date - go back to pending
+        const { error } = await supabase
+          .from('item_requests')
+          .update({
+            status: 'pending',
+            admin_proposed_date: null,
+          })
+          .eq('id', requestId);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Date Declined',
+          description: 'The proposed date has been declined. The admin will be notified.',
+        });
+      }
+
+      await fetchRequests();
+      return true;
+    } catch (error: any) {
+      console.error('Error confirming date:', error);
       toast({
         title: 'Error',
         description: 'Failed to update request. Please try again.',
@@ -178,6 +238,7 @@ export function useItemRequests() {
     createRequest,
     updateRequest,
     deleteRequest,
+    confirmProposedDate,
     refetch: fetchRequests,
   };
 }
