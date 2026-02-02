@@ -32,8 +32,8 @@ interface AddItemDialogProps {
     description: string; 
     category: string; 
     location: string; 
-    locationId?: string; 
-    imageUrl?: string; 
+    location_id?: string; 
+    image_url?: string; 
     tags?: string[];
     quantity?: number;
     is_consumable?: boolean;
@@ -64,8 +64,8 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
       description,
       category,
       location: selectedLocation?.name || '',
-      locationId,
-      imageUrl: imageUrl || undefined,
+      location_id: locationId,
+      image_url: imageUrl || undefined,
       tags: tags.length > 0 ? tags : undefined,
       quantity: quantity > 0 ? quantity : 1,
       is_consumable: isConsumable,
