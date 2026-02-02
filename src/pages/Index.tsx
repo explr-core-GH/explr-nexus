@@ -286,24 +286,32 @@ const Index = () => {
             title="Total Items" 
             value={stats.total} 
             icon={Package}
+            onClick={() => setStatusFilter('all')}
+            isActive={statusFilter === 'all'}
           />
           <StatsCard 
             title="Available" 
             value={stats.available} 
             icon={CheckCircle2}
             variant="available"
+            onClick={() => setStatusFilter('available')}
+            isActive={statusFilter === 'available'}
           />
           <StatsCard 
             title="Checked Out" 
             value={stats.checkedOut} 
             icon={Clock}
             variant="checked-out"
+            onClick={() => setStatusFilter('checked-out')}
+            isActive={statusFilter === 'checked-out'}
           />
           <StatsCard 
             title="Maintenance" 
             value={stats.maintenance} 
             icon={Wrench}
             variant="maintenance"
+            onClick={() => setStatusFilter('maintenance')}
+            isActive={statusFilter === 'maintenance'}
           />
         </div>
 
