@@ -18,6 +18,7 @@ export interface InventoryItem {
   tags: string[] | null;
   quantity: number | null;
   is_consumable: boolean;
+  bundle_id: string | null;
   created_at: string;
   updated_at: string;
 }

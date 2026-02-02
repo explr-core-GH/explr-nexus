@@ -135,6 +135,7 @@ export type Database = {
       }
       inventory_items: {
         Row: {
+          bundle_id: string | null
           category: string
           checked_out_at: string | null
           checked_out_by: string | null
@@ -153,6 +154,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bundle_id?: string | null
           category: string
           checked_out_at?: string | null
           checked_out_by?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bundle_id?: string | null
           category?: string
           checked_out_at?: string | null
           checked_out_by?: string | null
@@ -189,6 +192,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_items_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "bundles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_items_location_id_fkey"
             columns: ["location_id"]
