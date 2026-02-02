@@ -90,14 +90,14 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
           Add Item
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Add New Item</DialogTitle>
           <DialogDescription>
             Enter the details for the new inventory item. A unique QR code will be generated automatically.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4 overflow-y-auto flex-1 pr-2">
           {/* Photo Upload */}
           <div className="space-y-2">
             <Label>Photo</Label>
