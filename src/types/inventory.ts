@@ -13,6 +13,8 @@ export interface InventoryItem {
   locationId?: string;
   imageUrl?: string;
   tags?: string[];
+  quantity?: number;
+  isConsumable?: boolean;
   createdAt: string;
   lastUpdated: string;
 }

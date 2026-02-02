@@ -82,10 +82,12 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_consumable: boolean | null
           location: string
           location_id: string | null
           name: string
           qr_code: string
+          quantity: number | null
           status: string
           tags: string[] | null
           updated_at: string
@@ -98,10 +100,12 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_consumable?: boolean | null
           location: string
           location_id?: string | null
           name: string
           qr_code: string
+          quantity?: number | null
           status?: string
           tags?: string[] | null
           updated_at?: string
@@ -114,10 +118,12 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_consumable?: boolean | null
           location?: string
           location_id?: string | null
           name?: string
           qr_code?: string
+          quantity?: number | null
           status?: string
           tags?: string[] | null
           updated_at?: string
