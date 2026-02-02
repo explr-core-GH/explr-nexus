@@ -70,9 +70,10 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       });
     } catch (error: any) {
       console.error('Upload error:', error);
+      console.error('Upload error details:', JSON.stringify(error, null, 2));
       toast({
         title: 'Upload Failed',
-        description: error.message || 'Failed to upload image',
+        description: error.message || error.error || 'Failed to upload image',
         variant: 'destructive',
       });
     } finally {
