@@ -132,8 +132,8 @@ const Index = () => {
     description: string; 
     category: string; 
     location: string; 
-    locationId?: string; 
-    imageUrl?: string; 
+    location_id?: string; 
+    image_url?: string; 
     tags?: string[];
     quantity?: number;
     is_consumable?: boolean;
@@ -143,8 +143,8 @@ const Index = () => {
       description: item.description,
       category: item.category,
       location: item.location,
-      location_id: item.locationId,
-      image_url: item.imageUrl,
+      location_id: item.location_id,
+      image_url: item.image_url,
       tags: item.tags,
       quantity: item.quantity,
       is_consumable: item.is_consumable,
