@@ -307,6 +307,8 @@ export type Database = {
           full_name: string
           id: string
           organization_address: string | null
+          organization_latitude: number | null
+          organization_longitude: number | null
           organization_name: string | null
           position: string | null
           tags: string[] | null
@@ -319,6 +321,8 @@ export type Database = {
           full_name: string
           id?: string
           organization_address?: string | null
+          organization_latitude?: number | null
+          organization_longitude?: number | null
           organization_name?: string | null
           position?: string | null
           tags?: string[] | null
@@ -331,6 +335,8 @@ export type Database = {
           full_name?: string
           id?: string
           organization_address?: string | null
+          organization_latitude?: number | null
+          organization_longitude?: number | null
           organization_name?: string | null
           position?: string | null
           tags?: string[] | null
