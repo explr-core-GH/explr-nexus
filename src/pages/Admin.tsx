@@ -15,7 +15,8 @@ import {
   Tags,
   BookOpen,
   FolderOpen,
-  Package
+  Package,
+  UserPlus
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ import { ResourceManagement } from '@/components/ResourceManagement';
 import { CategoryManagement } from '@/components/CategoryManagement';
 import { BundleManagement } from '@/components/BundleManagement';
 import { useBundles } from '@/hooks/useBundles';
+import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { format } from 'date-fns';
 
 const Admin = () => {
@@ -74,11 +76,6 @@ const Admin = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedLocationItems, setSelectedLocationItems] = useState<typeof items>([]);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
-
-  // Redirect non-admins
-  if (!authLoading && !isAdmin) {
-    return <Navigate to="/" replace />;
-  }
 
   const filteredUsers = users.filter(u => 
     u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -111,6 +108,11 @@ const Admin = () => {
   }, [items]);
 
   const isLoading = authLoading || usersLoading || locationsLoading || itemsLoading || bundlesLoading;
+
+  // Redirect non-admins (moved after all hooks)
+  if (!authLoading && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   if (isLoading) {
     return (
@@ -178,16 +180,19 @@ const Admin = () => {
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6 mt-6">
             {/* Page Title */}
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-accent/10">
-                <Users className="h-6 w-6 text-accent" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-accent/10">
+                  <Users className="h-6 w-6 text-accent" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">User Management</h2>
+                  <p className="text-muted-foreground">
+                    Manage user roles and permissions
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold">User Management</h2>
-                <p className="text-muted-foreground">
-                  Manage user roles and permissions
-                </p>
-              </div>
+              <InviteUserDialog />
             </div>
 
             {/* Stats */}
