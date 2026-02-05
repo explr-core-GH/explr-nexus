@@ -5,7 +5,7 @@ interface StatsCardProps {
   title: string;
   value: number;
   icon: LucideIcon;
-  variant?: 'default' | 'available' | 'checked-out' | 'maintenance';
+  variant?: 'default' | 'available' | 'checked-out' | 'maintenance' | 'requested';
   onClick?: () => void;
   isActive?: boolean;
 }
@@ -16,6 +16,7 @@ export function StatsCard({ title, value, icon: Icon, variant = 'default', onCli
     available: 'bg-available/10 text-available',
     'checked-out': 'bg-checked-out/10 text-checked-out',
     maintenance: 'bg-maintenance/10 text-maintenance',
+    requested: 'bg-accent/10 text-accent',
   };
 
   return (

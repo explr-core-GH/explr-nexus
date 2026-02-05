@@ -7,7 +7,8 @@ import {
   Clock, 
   Wrench,
   ShieldAlert,
-  BookOpen
+  BookOpen,
+  MessageSquare
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import { ScanButton, ScanMode } from '@/components/ScanButton';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
 import { AdminNotifications } from '@/components/AdminNotifications';
 import { InstallPWAButton } from '@/components/InstallPWAButton';
+import { useItemRequests } from '@/hooks/useItemRequests';
 import { MyRequestsSheet } from '@/components/MyRequestsSheet';
 
 const Index = () => {
@@ -57,6 +59,7 @@ const Index = () => {
   const { users: selectableUsers } = useSelectableUsers();
   const { bundles, getItemBundles } = useBundles();
   const { profile, canCheckInOut, userRole, userTags } = useAuth();
+  const { requests } = useItemRequests();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -70,6 +73,15 @@ const Index = () => {
   const [scanNotFound, setScanNotFound] = useState(false);
 
   const stats = getStats();
+
+  // Get item IDs with pending requests
+  const requestedItemIds = useMemo(() => {
+    return new Set(
+      requests
+        .filter(r => r.status === 'pending' || r.status === 'pending_confirmation')
+        .map(r => r.itemId)
+    );
+  }, [requests]);
 
   const categories = useMemo(() => {
     const cats = [...new Set(items.map(item => item.category))];
@@ -100,12 +112,19 @@ const Index = () => {
         item.qr_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.location.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+      // Handle 'requested' as a special filter
+      const matchesStatus = statusFilter === 'all' 
+        || statusFilter === 'requested' 
+        || item.status === statusFilter;
+      
+      // If filtering by requested, only show items with pending requests
+      const matchesRequested = statusFilter !== 'requested' || requestedItemIds.has(item.id);
+      
       const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
       
-      return matchesSearch && matchesStatus && matchesCategory;
+      return matchesSearch && matchesStatus && matchesRequested && matchesCategory;
     });
-  }, [items, searchQuery, statusFilter, categoryFilter, userRole, userTags]);
+  }, [items, searchQuery, statusFilter, categoryFilter, userRole, userTags, requestedItemIds]);
 
   const handleItemClick = (item: InventoryItem) => {
     setSelectedItem(item);
@@ -281,7 +300,7 @@ const Index = () => {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatsCard 
             title="Total Items" 
             value={stats.total} 
@@ -313,6 +332,16 @@ const Index = () => {
             onClick={() => setStatusFilter('maintenance')}
             isActive={statusFilter === 'maintenance'}
           />
+          {isAdmin && (
+            <StatsCard 
+              title="Requested" 
+              value={requestedItemIds.size} 
+              icon={MessageSquare}
+              variant="requested"
+              onClick={() => setStatusFilter('requested')}
+              isActive={statusFilter === 'requested'}
+            />
+          )}
         </div>
 
         {/* Filters & Actions */}
