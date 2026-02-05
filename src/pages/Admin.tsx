@@ -462,6 +462,10 @@ const Admin = () => {
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(221, 83%, 53%)' }} />
                   <span>Mixed Status</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(271, 91%, 65%)' }} />
+                  <span>Educator Location</span>
+                </div>
               </div>
             </div>
 
