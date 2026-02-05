@@ -59,7 +59,12 @@ export function useLocations() {
     }
   };
 
-  const addLocation = async (location: { name: string; address: string }) => {
+  const addLocation = async (location: { 
+    name: string; 
+    address: string; 
+    latitude?: number; 
+    longitude?: number;
+  }) => {
     if (!isAdmin) {
       toast({
         title: 'Permission Denied',
@@ -70,8 +75,16 @@ export function useLocations() {
     }
 
     try {
-      // Geocode the address
-      const coords = await geocodeAddress(location.address);
+      // Use provided coordinates or geocode the address
+      let coords = { 
+        latitude: location.latitude ?? null, 
+        longitude: location.longitude ?? null 
+      };
+      
+      // Only geocode if coordinates weren't provided
+      if (coords.latitude === null || coords.longitude === null) {
+        coords = await geocodeAddress(location.address);
+      }
 
       const { data, error } = await supabase
         .from('locations')

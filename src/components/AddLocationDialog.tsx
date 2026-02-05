@@ -10,34 +10,67 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 interface AddLocationDialogProps {
-  onAdd: (location: { name: string; address: string }) => Promise<unknown>;
+  onAdd: (location: { 
+    name: string; 
+    address: string; 
+    latitude?: number; 
+    longitude?: number;
+  }) => Promise<unknown>;
 }
 
 export function AddLocationDialog({ onAdd }: AddLocationDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | undefined>();
+  const [longitude, setLongitude] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleAddressChange = (newAddress: string, lat?: number, lon?: number) => {
+    setAddress(newAddress);
+    setLatitude(lat);
+    setLongitude(lon);
+  };
+
+  const isValidAddress = address.trim() && latitude !== undefined && longitude !== undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !address.trim()) return;
+    if (!name.trim() || !isValidAddress) return;
 
     setIsLoading(true);
     try {
-      await onAdd({ name: name.trim(), address: address.trim() });
+      await onAdd({ 
+        name: name.trim(), 
+        address: address.trim(),
+        latitude,
+        longitude
+      });
       setName('');
       setAddress('');
+      setLatitude(undefined);
+      setLongitude(undefined);
       setOpen(false);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setName('');
+      setAddress('');
+      setLatitude(undefined);
+      setLongitude(undefined);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
@@ -64,22 +97,18 @@ export function AddLocationDialog({ onAdd }: AddLocationDialogProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              placeholder="e.g., 123 Main St, City, State"
+            <AddressAutocomplete
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={handleAddressChange}
+              placeholder="Search for an address..."
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Address will be automatically geocoded for map display
-            </p>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !name.trim() || !address.trim()}>
+            <Button type="submit" disabled={isLoading || !name.trim() || !isValidAddress}>
               {isLoading ? 'Adding...' : 'Add Location'}
             </Button>
           </div>
