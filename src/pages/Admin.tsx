@@ -135,10 +135,17 @@ const Admin = () => {
   };
 
   const handleLocationClick = (location: Location) => {
-    const locationItems = items.filter(i => i.location_id === location.id);
+    // Items assigned directly to this location
+    const directItems = items.filter(i => i.location_id === location.id);
+    // Get educators at this address and their checked-out items
     const educators = educatorsByLocationAddress[location.address] || [];
+    const educatorItems = educators.flatMap(e => e.items);
+    // Combine and deduplicate items
+    const directItemIds = new Set(directItems.map(i => i.id));
+    const allItems = [...directItems, ...educatorItems.filter(i => !directItemIds.has(i.id))];
+    
     setSelectedLocation(location);
-    setSelectedLocationItems(locationItems);
+    setSelectedLocationItems(allItems);
     setSelectedLocationEducators(educators);
     setLocationDialogOpen(true);
   };
@@ -570,8 +577,16 @@ const Admin = () => {
                     </TableRow>
                   ) : (
                     filteredLocations.map((location) => {
-                      const itemCount = items.filter(i => i.location_id === location.id).length;
-                      const educatorCount = (educatorsByLocationAddress[location.address] || []).length;
+                      // Items assigned directly to this location by location_id
+                      const directItems = items.filter(i => i.location_id === location.id);
+                      // Items checked out to educators at this location
+                      const educators = educatorsByLocationAddress[location.address] || [];
+                      const educatorItems = educators.flatMap(e => e.items);
+                      // Total unique items (avoid double counting)
+                      const directItemIds = new Set(directItems.map(i => i.id));
+                      const additionalEducatorItems = educatorItems.filter(i => !directItemIds.has(i.id));
+                      const totalItemCount = directItems.length + additionalEducatorItems.length;
+                      const educatorCount = educators.length;
                       return (
                         <TableRow 
                           key={location.id} 
@@ -591,7 +606,7 @@ const Admin = () => {
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <div className="flex gap-1">
-                              <Badge variant="secondary">{itemCount} items</Badge>
+                              <Badge variant="secondary">{totalItemCount} items</Badge>
                               {educatorCount > 0 && (
                                 <Badge variant="outline">{educatorCount} educators</Badge>
                               )}
