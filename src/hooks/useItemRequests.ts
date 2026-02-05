@@ -108,7 +108,7 @@ export function useItemRequests() {
 
   const updateRequest = async (
     requestId: string,
-    status: 'approved' | 'denied' | 'pending_confirmation',
+    status: 'approved' | 'denied' | 'pending_confirmation' | 'pending',
     adminResponse?: string,
     confirmedDate?: string,
     adminProposedDate?: string
@@ -130,6 +130,7 @@ export function useItemRequests() {
         approved: { title: 'Request Approved', description: 'The request has been approved.' },
         denied: { title: 'Request Denied', description: 'The request has been denied.' },
         pending_confirmation: { title: 'Date Proposed', description: 'A new date has been proposed to the requester.' },
+        pending: { title: 'Request Updated', description: 'The request has been updated.' },
       };
 
       toast(statusMessages[status]);
