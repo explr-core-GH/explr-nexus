@@ -469,7 +469,24 @@ export function useInventoryDB() {
     }
 
     try {
-      // Update item
+      // Check if this is a bundle item - if so, check in all items in the bundle
+      let allItemIds = [itemId];
+      let isBundleCheckIn = false;
+      
+      if (item.bundle_id) {
+        // Fetch bundle items
+        const { data: bundleItems, error: bundleError } = await supabase
+          .from('bundle_items')
+          .select('item_id')
+          .eq('bundle_id', item.bundle_id);
+        
+        if (!bundleError && bundleItems && bundleItems.length > 0) {
+          allItemIds = [itemId, ...bundleItems.map(bi => bi.item_id)];
+          isBundleCheckIn = true;
+        }
+      }
+
+      // Update item(s)
       const updateData: Record<string, unknown> = {
         status: 'available',
         checked_out_by: null,
@@ -486,34 +503,41 @@ export function useInventoryDB() {
       const { error: updateError } = await supabase
         .from('inventory_items')
         .update(updateData)
-        .eq('id', itemId);
+        .in('id', allItemIds);
 
       if (updateError) throw updateError;
 
-      // Create activity log
-      const { error: logError } = await supabase
-        .from('activity_logs')
-        .insert({
-          item_id: itemId,
-          item_name: item.name,
-          action: 'check-in',
-          performed_by: user.id,
-          performed_by_name: userName,
-        });
+      // Create activity logs for all items
+      const itemsToLog = items.filter(i => allItemIds.includes(i.id));
+      const logEntries = itemsToLog.map(i => ({
+        item_id: i.id,
+        item_name: i.name,
+        action: 'check-in',
+        performed_by: user.id,
+        performed_by_name: userName,
+      }));
 
-      if (logError) throw logError;
+      await supabase.from('activity_logs').insert(logEntries);
 
       // Update local state
       const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
       setItems(prev =>
         prev.map(i =>
-          i.id === itemId
+          allItemIds.includes(i.id)
             ? { ...i, status: 'available' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );
 
       await fetchLogs();
+      
+      if (isBundleCheckIn) {
+        toast({
+          title: 'Bundle Checked In',
+          description: `${item.name} and ${allItemIds.length - 1} bundle items have been checked in`,
+        });
+      }
+      
       return true;
     } catch (error: any) {
       console.error('Error checking in:', error);
@@ -540,6 +564,23 @@ export function useInventoryDB() {
     if (!item) return false;
 
     try {
+      // Check if this is a bundle item - if so, send all items to maintenance
+      let allItemIds = [itemId];
+      let isBundleMaintenance = false;
+      
+      if (item.bundle_id) {
+        // Fetch bundle items
+        const { data: bundleItems, error: bundleError } = await supabase
+          .from('bundle_items')
+          .select('item_id')
+          .eq('bundle_id', item.bundle_id);
+        
+        if (!bundleError && bundleItems && bundleItems.length > 0) {
+          allItemIds = [itemId, ...bundleItems.map(bi => bi.item_id)];
+          isBundleMaintenance = true;
+        }
+      }
+
       const updateData: Record<string, unknown> = {
         status: 'maintenance',
         checked_out_by: null,
@@ -556,23 +597,30 @@ export function useInventoryDB() {
       const { error } = await supabase
         .from('inventory_items')
         .update(updateData)
-        .eq('id', itemId);
+        .in('id', allItemIds);
 
       if (error) throw error;
 
       const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
       setItems(prev =>
         prev.map(i =>
-          i.id === itemId
+          allItemIds.includes(i.id)
             ? { ...i, status: 'maintenance' as const, checked_out_by: null, checked_out_at: null, ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );
 
-      toast({
-        title: 'Sent to Maintenance',
-        description: `${item.name} has been sent for maintenance`,
-      });
+      if (isBundleMaintenance) {
+        toast({
+          title: 'Bundle Sent to Maintenance',
+          description: `${item.name} and ${allItemIds.length - 1} bundle items have been sent for maintenance`,
+        });
+      } else {
+        toast({
+          title: 'Sent to Maintenance',
+          description: `${item.name} has been sent for maintenance`,
+        });
+      }
       return true;
     } catch (error: any) {
       console.error('Error setting maintenance:', error);
