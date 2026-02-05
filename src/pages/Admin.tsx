@@ -66,11 +66,12 @@ import { useBundles } from '@/hooks/useBundles';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { AdminRequestsPanel } from '@/components/AdminRequestsPanel';
+import { EditUserLocationDialog } from '@/components/EditUserLocationDialog';
 import { format } from 'date-fns';
 
 const Admin = () => {
   const { isAdmin, isLoading: authLoading, user } = useAuth();
-  const { users, isLoading: usersLoading, setUserRole, updateUserTags, deleteUser } = useUserManagement();
+  const { users, isLoading: usersLoading, setUserRole, updateUserTags, updateUserLocation, deleteUser } = useUserManagement();
   const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
   const { items, isLoading: itemsLoading } = useInventoryDB();
   const { bundles, isLoading: bundlesLoading, createBundle, updateBundle, deleteBundle } = useBundles();
@@ -337,12 +338,20 @@ const Admin = () => {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                               {!isCurrentUser && (
-                                <EditUserTagsDialog
-                                  userName={userItem.full_name}
-                                  userId={userItem.user_id}
-                                  currentTags={userItem.tags}
-                                  onSave={updateUserTags}
-                                />
+                                <>
+                                  <EditUserLocationDialog
+                                    userName={userItem.full_name}
+                                    userId={userItem.user_id}
+                                    currentAddress={userItem.organization_address}
+                                    onSave={updateUserLocation}
+                                  />
+                                  <EditUserTagsDialog
+                                    userName={userItem.full_name}
+                                    userId={userItem.user_id}
+                                    currentTags={userItem.tags}
+                                    onSave={updateUserTags}
+                                  />
+                                </>
                               )}
                               {isCurrentUser ? (
                                 <span className="text-sm text-muted-foreground">—</span>
