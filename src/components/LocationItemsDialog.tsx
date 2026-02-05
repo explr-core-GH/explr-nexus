@@ -1,4 +1,4 @@
-import { MapPin, Package, Users } from 'lucide-react';
+import { MapPin, Package, Users, Mail, Building2, ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
 import { Location } from '@/hooks/useLocations';
 import { InventoryItem } from '@/hooks/useInventoryDB';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
 interface Educator {
   id: string;
@@ -69,6 +70,15 @@ export function LocationItemsDialog({
       }
       return newSet;
     });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -128,48 +138,99 @@ export function LocationItemsDialog({
               </p>
             ) : (
               <ScrollArea className="h-[300px]">
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {educators.map((educator) => (
                     <Collapsible
                       key={educator.id}
                       open={expandedEducators.has(educator.id)}
                       onOpenChange={() => toggleEducator(educator.id)}
                     >
-                      <CollapsibleTrigger className="w-full">
-                        <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg hover:bg-secondary/70 transition-colors">
-                          <div className="text-left">
-                            <p className="font-medium">{educator.full_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {educator.email || 'No email'}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">
-                              {educator.items.length} items
-                            </Badge>
-                            <ChevronDown 
-                              className={`h-4 w-4 transition-transform ${
-                                expandedEducators.has(educator.id) ? 'rotate-180' : ''
-                              }`} 
-                            />
-                          </div>
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="mt-1 ml-4 space-y-1">
-                          {educator.items.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
-                            >
-                              <span>{item.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {item.category}
-                              </Badge>
+                      <Card className="overflow-hidden">
+                        <CollapsibleTrigger className="w-full">
+                          <div className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {getInitials(educator.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left">
+                              <p className="font-medium">{educator.full_name}</p>
+                              {educator.organization_name && (
+                                <p className="text-xs text-muted-foreground">
+                                  {educator.organization_name}
+                                </p>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      </CollapsibleContent>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">
+                                {educator.items.length} items
+                              </Badge>
+                              <ChevronDown 
+                                className={`h-4 w-4 text-muted-foreground transition-transform ${
+                                  expandedEducators.has(educator.id) ? 'rotate-180' : ''
+                                }`} 
+                              />
+                            </div>
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <CardContent className="pt-0 pb-3 px-3">
+                            {/* Profile Details */}
+                            <div className="space-y-2 mb-3 pt-2 border-t">
+                              {educator.email && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Mail className="h-3.5 w-3.5" />
+                                  <a 
+                                    href={`mailto:${educator.email}`} 
+                                    className="hover:text-primary hover:underline"
+                                  >
+                                    {educator.email}
+                                  </a>
+                                </div>
+                              )}
+                              {educator.organization_name && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Building2 className="h-3.5 w-3.5" />
+                                  <span>{educator.organization_name}</span>
+                                </div>
+                              )}
+                              {educator.organization_address && (
+                                <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                                  <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                                  <span className="text-xs">{educator.organization_address}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Checked Out Items */}
+                            {educator.items.length > 0 && (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                  Checked Out Items
+                                </p>
+                                {educator.items.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
+                                  >
+                                    <div>
+                                      <span className="font-medium">{item.name}</span>
+                                      {item.checked_out_at && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Since {new Date(item.checked_out_at).toLocaleDateString()}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Badge variant="outline" className="text-xs">
+                                      {item.category}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
                     </Collapsible>
                   ))}
                 </div>
