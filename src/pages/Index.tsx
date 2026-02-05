@@ -218,25 +218,33 @@ const Index = () => {
   };
 
   // Convert DB item to UI format for dialogs
-  const convertToUIItem = (item: InventoryItem) => ({
-    id: item.id,
-    name: item.name,
-    description: item.description || '',
-    category: item.category,
-    status: item.status,
-    qrCode: item.qr_code,
-    location: item.location,
-    locationId: item.location_id || undefined,
-    imageUrl: item.image_url || undefined,
-    tags: item.tags || undefined,
-    quantity: item.quantity ?? undefined,
-    isConsumable: item.is_consumable || undefined,
-    checkedOutBy: item.checked_out_by_name || undefined,
-    checkedOutAt: item.checked_out_at || undefined,
-    bundleId: item.bundle_id || undefined,
-    createdAt: item.created_at,
-    lastUpdated: item.updated_at,
-  });
+  const convertToUIItem = (item: InventoryItem) => {
+    // Determine if item is at an educator location (checked out and location changed to educator's org)
+    const isAtEducatorLocation = item.status === 'checked-out' && 
+      item.checked_out_by !== null && 
+      item.location_id !== null;
+    
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description || '',
+      category: item.category,
+      status: item.status,
+      qrCode: item.qr_code,
+      location: item.location,
+      locationId: item.location_id || undefined,
+      imageUrl: item.image_url || undefined,
+      tags: item.tags || undefined,
+      quantity: item.quantity ?? undefined,
+      isConsumable: item.is_consumable || undefined,
+      isAtEducatorLocation,
+      checkedOutBy: item.checked_out_by_name || undefined,
+      checkedOutAt: item.checked_out_at || undefined,
+      bundleId: item.bundle_id || undefined,
+      createdAt: item.created_at,
+      lastUpdated: item.updated_at,
+    };
+  };
 
   if (isLoading) {
     return (

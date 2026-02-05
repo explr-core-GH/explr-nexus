@@ -1,4 +1,4 @@
-import { Package, MapPin, User, Clock, QrCode, Repeat } from 'lucide-react';
+import { Package, MapPin, User, Clock, QrCode, Repeat, GraduationCap } from 'lucide-react';
 import { InventoryItem } from '@/types/inventory';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -53,8 +53,12 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
                 {item.description}
               </p>
               <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
+                <span className={`flex items-center gap-1 ${item.isAtEducatorLocation ? 'text-purple-600 dark:text-purple-400 font-medium' : ''}`}>
+                  {item.isAtEducatorLocation ? (
+                    <GraduationCap className="h-3 w-3" />
+                  ) : (
+                    <MapPin className="h-3 w-3" />
+                  )}
                   {item.location}
                 </span>
                 <span className="flex items-center gap-1 font-mono">
@@ -90,6 +94,12 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
                 <Clock className="h-3.5 w-3.5" />
                 {formatDistanceToNow(new Date(item.checkedOutAt), { addSuffix: true })}
               </span>
+            )}
+            {item.isAtEducatorLocation && (
+              <Badge variant="secondary" className="text-xs gap-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                <GraduationCap className="h-3 w-3" />
+                At Educator
+              </Badge>
             )}
           </div>
         </div>
