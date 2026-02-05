@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location } from '@/hooks/useLocations';
 import { InventoryItem } from '@/hooks/useInventoryDB';
+import { useEducatorLocations, EducatorLocation } from '@/hooks/useEducatorLocations';
 
 interface LocationsMapProps {
   locations: Location[];
@@ -40,6 +41,7 @@ const createColoredIcon = (color: string) => {
 export function LocationsMap({ locations, items, onLocationClick }: LocationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const { educatorLocations } = useEducatorLocations(items);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -73,6 +75,7 @@ export function LocationsMap({ locations, items, onLocationClick }: LocationsMap
     // Add markers for locations with coordinates
     const bounds: L.LatLngExpression[] = [];
 
+    // Equipment locations
     locations.forEach((location) => {
       if (location.latitude && location.longitude) {
         // Get items at this location
@@ -129,11 +132,47 @@ export function LocationsMap({ locations, items, onLocationClick }: LocationsMap
       }
     });
 
+    // Add educator markers (purple) for users with checked-out items
+    educatorLocations.forEach((educator: EducatorLocation) => {
+      const marker = L.marker([educator.latitude, educator.longitude], {
+        icon: createColoredIcon('hsl(271, 91%, 65%)'), // Purple for educators
+      }).addTo(map);
+
+      const itemsList = educator.checkedOutItems
+        .slice(0, 5)
+        .map(item => `• ${item.name}`)
+        .join('<br/>');
+      
+      const moreItems = educator.checkedOutItems.length > 5 
+        ? `<br/><em>+${educator.checkedOutItems.length - 5} more...</em>` 
+        : '';
+
+      const popupContent = `
+        <div style="min-width: 180px;">
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+            <span style="background: hsl(271, 91%, 65%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">EDUCATOR</span>
+          </div>
+          <strong>${educator.full_name}</strong>
+          ${educator.organization_name ? `<p style="font-size: 12px; color: #666; margin: 2px 0;">${educator.organization_name}</p>` : ''}
+          <p style="font-size: 11px; color: #888; margin: 2px 0;">${educator.organization_address || ''}</p>
+          <div style="font-size: 12px; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
+            <strong>${educator.checkedOutItems.length}</strong> item${educator.checkedOutItems.length !== 1 ? 's' : ''} checked out:
+            <div style="margin-top: 4px; font-size: 11px;">
+              ${itemsList}${moreItems}
+            </div>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      bounds.push([educator.latitude, educator.longitude]);
+    });
+
     // Fit map to bounds if we have markers
     if (bounds.length > 0) {
       map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
     }
-  }, [locations, items, onLocationClick]);
+  }, [locations, items, onLocationClick, educatorLocations]);
 
   return (
     <div 
