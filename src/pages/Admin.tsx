@@ -53,7 +53,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserManagement, UserWithRole, AppRole } from '@/hooks/useUserManagement';
 import { useLocations, Location } from '@/hooks/useLocations';
-import { useInventoryDB } from '@/hooks/useInventoryDB';
+import { useInventoryDB, InventoryItem } from '@/hooks/useInventoryDB';
 import { UserMenu } from '@/components/UserMenu';
 import { AddLocationDialog } from '@/components/AddLocationDialog';
 import { LocationsMap } from '@/components/LocationsMap';
@@ -69,6 +69,16 @@ import { AdminRequestsPanel } from '@/components/AdminRequestsPanel';
 import { EditUserLocationDialog } from '@/components/EditUserLocationDialog';
 import { format } from 'date-fns';
 
+interface Educator {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string | null;
+  organization_name: string | null;
+  organization_address: string | null;
+  items: InventoryItem[];
+}
+
 const Admin = () => {
   const { isAdmin, isLoading: authLoading, user } = useAuth();
   const { users, isLoading: usersLoading, setUserRole, updateUserTags, updateUserLocation, deleteUser } = useUserManagement();
@@ -80,6 +90,7 @@ const Admin = () => {
   const [locationSearchQuery, setLocationSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedLocationItems, setSelectedLocationItems] = useState<typeof items>([]);
+  const [selectedLocationEducators, setSelectedLocationEducators] = useState<Educator[]>([]);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
 
   const filteredUsers = users.filter(u => 
@@ -92,14 +103,43 @@ const Admin = () => {
     loc.address.toLowerCase().includes(locationSearchQuery.toLowerCase())
   );
 
+  // Build a map of educators by location address
+  const educatorsByLocationAddress = useMemo(() => {
+    const map: Record<string, Educator[]> = {};
+    
+    users.forEach(u => {
+      if (u.organization_address) {
+        const educator: Educator = {
+          id: u.id,
+          user_id: u.user_id,
+          full_name: u.full_name,
+          email: u.email,
+          organization_name: u.organization_name,
+          organization_address: u.organization_address,
+          items: items.filter(i => i.status === 'checked-out' && i.checked_out_by === u.user_id),
+        };
+        
+        if (!map[u.organization_address]) {
+          map[u.organization_address] = [];
+        }
+        map[u.organization_address].push(educator);
+      }
+    });
+    
+    return map;
+  }, [users, items]);
+
   const handleRoleChange = async (userItem: UserWithRole, newRole: string) => {
     const role = newRole === 'none' ? null : newRole as AppRole;
     await setUserRole(userItem.user_id, userItem.full_name, role);
   };
 
-  const handleLocationClick = (location: Location, locationItems: typeof items) => {
+  const handleLocationClick = (location: Location) => {
+    const locationItems = items.filter(i => i.location_id === location.id);
+    const educators = educatorsByLocationAddress[location.address] || [];
     setSelectedLocation(location);
     setSelectedLocationItems(locationItems);
+    setSelectedLocationEducators(educators);
     setLocationDialogOpen(true);
   };
 
@@ -531,8 +571,13 @@ const Admin = () => {
                   ) : (
                     filteredLocations.map((location) => {
                       const itemCount = items.filter(i => i.location_id === location.id).length;
+                      const educatorCount = (educatorsByLocationAddress[location.address] || []).length;
                       return (
-                        <TableRow key={location.id}>
+                        <TableRow 
+                          key={location.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleLocationClick(location)}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
@@ -545,7 +590,12 @@ const Admin = () => {
                             {location.address}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
-                            <Badge variant="secondary">{itemCount} items</Badge>
+                            <div className="flex gap-1">
+                              <Badge variant="secondary">{itemCount} items</Badge>
+                              {educatorCount > 0 && (
+                                <Badge variant="outline">{educatorCount} educators</Badge>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                             {location.latitude && location.longitude ? (
@@ -556,7 +606,7 @@ const Admin = () => {
                               <span className="text-destructive">Not geocoded</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive">
@@ -620,6 +670,7 @@ const Admin = () => {
       <LocationItemsDialog
         location={selectedLocation}
         items={selectedLocationItems}
+        educators={selectedLocationEducators}
         open={locationDialogOpen}
         onOpenChange={setLocationDialogOpen}
       />
