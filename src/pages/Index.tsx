@@ -231,7 +231,7 @@ const Index = () => {
     tags: item.tags || undefined,
     quantity: item.quantity ?? undefined,
     isConsumable: item.is_consumable || undefined,
-    checkedOutBy: item.checked_out_by || undefined,
+    checkedOutBy: item.checked_out_by_name || undefined,
     checkedOutAt: item.checked_out_at || undefined,
     bundleId: item.bundle_id || undefined,
     createdAt: item.created_at,

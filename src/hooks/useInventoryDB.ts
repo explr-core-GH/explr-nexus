@@ -14,6 +14,7 @@ export interface InventoryItem {
   location_id: string | null;
   image_url: string | null;
   checked_out_by: string | null;
+  checked_out_by_name: string | null;
   checked_out_at: string | null;
   tags: string[] | null;
   quantity: number | null;
@@ -40,7 +41,7 @@ export function useInventoryDB() {
   const { user, profile, isAdmin } = useAuth();
   const { toast } = useToast();
 
-  // Fetch inventory items
+  // Fetch inventory items with checked-out-by user names
   const fetchItems = async () => {
     try {
       const { data, error } = await supabase
@@ -49,10 +50,32 @@ export function useInventoryDB() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Get unique user IDs that have checked out items
+      const userIds = [...new Set((data || [])
+        .filter(item => item.checked_out_by)
+        .map(item => item.checked_out_by as string))];
+
+      // Fetch profile names for those users
+      let userNameMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+        
+        if (profiles) {
+          userNameMap = profiles.reduce((acc, p) => {
+            acc[p.user_id] = p.full_name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
       
       setItems((data || []).map(item => ({
         ...item,
-        status: item.status as 'available' | 'checked-out' | 'maintenance'
+        status: item.status as 'available' | 'checked-out' | 'maintenance',
+        checked_out_by_name: item.checked_out_by ? (userNameMap[item.checked_out_by] || null) : null
       })));
     } catch (error: any) {
       console.error('Error fetching items:', error);
@@ -146,9 +169,10 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
-      const typedData = {
+      const typedData: InventoryItem = {
         ...data,
-        status: data.status as 'available' | 'checked-out' | 'maintenance'
+        status: data.status as 'available' | 'checked-out' | 'maintenance',
+        checked_out_by_name: null
       };
       
       setItems(prev => [typedData, ...prev]);
@@ -664,9 +688,10 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
-      const typedData = (data || []).map(item => ({
+      const typedData: InventoryItem[] = (data || []).map(item => ({
         ...item,
-        status: item.status as 'available' | 'checked-out' | 'maintenance'
+        status: item.status as 'available' | 'checked-out' | 'maintenance',
+        checked_out_by_name: null
       }));
 
       setItems(prev => [...typedData, ...prev]);
