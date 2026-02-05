@@ -253,7 +253,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[], selectedUserId?: string) => {
+  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string; address?: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[], selectedUserId?: string) => {
     if (!user) return false;
     
     // Use the selected user ID if provided, otherwise fall back to logged-in user
@@ -268,6 +268,32 @@ export function useInventoryDB() {
       });
       return false;
     }
+
+    // If checking out to a specific user, try to get their organization location
+    let educatorLocation: { id: string; name: string } | null = null;
+    if (selectedUserId && locations) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_name, organization_address')
+          .eq('user_id', selectedUserId)
+          .maybeSingle();
+        
+        if (profile?.organization_address) {
+          // Find location that matches the educator's organization address
+          const matchingLocation = locations.find(l => l.address === profile.organization_address);
+          if (matchingLocation) {
+            educatorLocation = { id: matchingLocation.id, name: matchingLocation.name };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching educator profile for location:', error);
+      }
+    }
+
+    // Use educator's location if found, otherwise use the provided newLocationId
+    const finalLocationId = educatorLocation?.id || newLocationId;
+    const finalLocationName = educatorLocation?.name || (newLocationId && locations ? locations.find(l => l.id === newLocationId)?.name : null);
 
     try {
       // If bundleItemIds provided, check out all bundle items together
@@ -291,12 +317,9 @@ export function useInventoryDB() {
           checked_out_by: checkOutUserId,
           checked_out_at: new Date().toISOString(),
         };
-        if (newLocationId && locations) {
-          const newLocation = locations.find(l => l.id === newLocationId);
-          if (newLocation) {
-            updateData.location = newLocation.name;
-            updateData.location_id = newLocationId;
-          }
+        if (finalLocationId && finalLocationName) {
+          updateData.location = finalLocationName;
+          updateData.location_id = finalLocationId;
         }
 
         // Update all items in the bundle
@@ -319,11 +342,10 @@ export function useInventoryDB() {
         await supabase.from('activity_logs').insert(logEntries);
 
         // Update local state
-        const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
         setItems(prev =>
           prev.map(i =>
             allItemIds.includes(i.id)
-              ? { ...i, status: 'checked-out' as const, checked_out_by: checkOutUserId, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+              ? { ...i, status: 'checked-out' as const, checked_out_by: checkOutUserId, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(finalLocationId && finalLocationName && { location: finalLocationName, location_id: finalLocationId }) }
               : i
           )
         );
@@ -409,12 +431,9 @@ export function useInventoryDB() {
         checked_out_by: checkOutUserId,
         checked_out_at: new Date().toISOString(),
       };
-      if (newLocationId && locations) {
-        const newLocation = locations.find(l => l.id === newLocationId);
-        if (newLocation) {
-          updateData.location = newLocation.name;
-          updateData.location_id = newLocationId;
-        }
+      if (finalLocationId && finalLocationName) {
+        updateData.location = finalLocationName;
+        updateData.location_id = finalLocationId;
       }
       
       const { error: updateError } = await supabase
@@ -438,11 +457,10 @@ export function useInventoryDB() {
       if (logError) throw logError;
 
       // Update local state
-      const newLocation = newLocationId && locations ? locations.find(l => l.id === newLocationId) : null;
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'checked-out' as const, checked_out_by: checkOutUserId, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+            ? { ...i, status: 'checked-out' as const, checked_out_by: checkOutUserId, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(finalLocationId && finalLocationName && { location: finalLocationName, location_id: finalLocationId }) }
             : i
         )
       );
