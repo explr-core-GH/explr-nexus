@@ -253,8 +253,11 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[]) => {
+  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[], selectedUserId?: string) => {
     if (!user) return false;
+    
+    // Use the selected user ID if provided, otherwise fall back to logged-in user
+    const checkOutUserId = selectedUserId || user.id;
     
     const item = items.find(i => i.id === itemId);
     if (!item || item.status !== 'available') {
@@ -285,7 +288,7 @@ export function useInventoryDB() {
         // Build update data
         const updateData: Record<string, unknown> = {
           status: 'checked-out',
-          checked_out_by: user.id,
+          checked_out_by: checkOutUserId,
           checked_out_at: new Date().toISOString(),
         };
         if (newLocationId && locations) {
@@ -320,7 +323,7 @@ export function useInventoryDB() {
         setItems(prev =>
           prev.map(i =>
             allItemIds.includes(i.id)
-              ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+              ? { ...i, status: 'checked-out' as const, checked_out_by: checkOutUserId, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
               : i
           )
         );
@@ -403,7 +406,7 @@ export function useInventoryDB() {
       // Standard check-out for non-consumable items
       const updateData: Record<string, unknown> = {
         status: 'checked-out',
-        checked_out_by: user.id,
+        checked_out_by: checkOutUserId,
         checked_out_at: new Date().toISOString(),
       };
       if (newLocationId && locations) {
@@ -439,7 +442,7 @@ export function useInventoryDB() {
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+            ? { ...i, status: 'checked-out' as const, checked_out_by: checkOutUserId, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );
