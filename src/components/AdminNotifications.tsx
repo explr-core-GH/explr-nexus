@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus } from 'lucide-react';
+import { Bell, Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,42 +26,104 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useItemRequests, ItemRequest } from '@/hooks/useItemRequests';
 import { format } from 'date-fns';
 import { DateTimePicker } from '@/components/DateTimePicker';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export function AdminNotifications() {
   const { requests, pendingCount, updateRequest, deleteRequest, loading } = useItemRequests();
   const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
-  const [action, setAction] = useState<'approve' | 'deny' | 'propose' | null>(null);
+  const [action, setAction] = useState<'approve' | 'deny' | 'propose' | 'edit' | null>(null);
   const [response, setResponse] = useState('');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [proposedDate, setProposedDate] = useState<Date | undefined>(undefined);
+  const [editStatus, setEditStatus] = useState<'approved' | 'denied' | 'pending' | 'pending_confirmation'>('approved');
   const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  const sendNotification = async (request: ItemRequest, newStatus: string, adminResponse?: string, confirmedDate?: string, proposedDate?: string) => {
+    if (!request.requesterEmail) return;
+    
+    try {
+      await supabase.functions.invoke('notify-request-update', {
+        body: {
+          recipientEmail: request.requesterEmail,
+          recipientName: request.requesterName,
+          itemName: request.itemName,
+          newStatus,
+          adminResponse,
+          confirmedDate,
+          proposedDate,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+    }
+  };
 
   const handleAction = async () => {
     if (!selectedRequest || !action) return;
 
     setIsProcessing(true);
+    let success = false;
+    let newStatus = '';
+    let confirmedDateStr: string | undefined;
+    let proposedDateStr: string | undefined;
     
     if (action === 'approve') {
-      await updateRequest(
+      newStatus = 'approved';
+      confirmedDateStr = selectedDate || undefined;
+      success = await updateRequest(
         selectedRequest.id,
         'approved',
         response,
-        selectedDate || undefined
+        confirmedDateStr
       );
     } else if (action === 'deny') {
-      await updateRequest(
+      newStatus = 'denied';
+      success = await updateRequest(
         selectedRequest.id,
         'denied',
         response
       );
     } else if (action === 'propose' && proposedDate) {
-      await updateRequest(
+      newStatus = 'pending_confirmation';
+      proposedDateStr = proposedDate.toISOString();
+      success = await updateRequest(
         selectedRequest.id,
         'pending_confirmation',
         response,
         undefined,
-        proposedDate.toISOString()
+        proposedDateStr
       );
+    } else if (action === 'edit') {
+      newStatus = editStatus;
+      if (editStatus === 'approved') {
+        confirmedDateStr = selectedDate || proposedDate?.toISOString();
+      } else if (editStatus === 'pending_confirmation' && proposedDate) {
+        proposedDateStr = proposedDate.toISOString();
+      }
+      success = await updateRequest(
+        selectedRequest.id,
+        editStatus,
+        response,
+        confirmedDateStr,
+        proposedDateStr
+      );
+    }
+
+    // Send notification email if request has an email and action was successful
+    if (success && selectedRequest.requesterEmail) {
+      await sendNotification(
+        selectedRequest,
+        newStatus,
+        response || undefined,
+        confirmedDateStr,
+        proposedDateStr
+      );
+      toast({
+        title: 'Notification Sent',
+        description: `${selectedRequest.requesterName} has been notified of the update.`,
+      });
     }
     
     setSelectedRequest(null);
@@ -69,10 +131,11 @@ export function AdminNotifications() {
     setResponse('');
     setSelectedDate('');
     setProposedDate(undefined);
+    setEditStatus('approved');
     setIsProcessing(false);
   };
 
-  const openActionDialog = (request: ItemRequest, actionType: 'approve' | 'deny' | 'propose') => {
+  const openActionDialog = (request: ItemRequest, actionType: 'approve' | 'deny' | 'propose' | 'edit') => {
     setSelectedRequest(request);
     setAction(actionType);
     // Pre-select first date if available for approval
@@ -82,6 +145,17 @@ export function AdminNotifications() {
     // Reset proposed date
     if (actionType === 'propose') {
       setProposedDate(undefined);
+    }
+    // For edit, pre-fill with current values
+    if (actionType === 'edit') {
+      setEditStatus(request.status as 'approved' | 'denied' | 'pending' | 'pending_confirmation');
+      setResponse(request.adminResponse || '');
+      if (request.confirmedDate) {
+        setSelectedDate(request.confirmedDate);
+      }
+      if (request.adminProposedDate) {
+        setProposedDate(new Date(request.adminProposedDate));
+      }
     }
   };
 
@@ -258,6 +332,21 @@ export function AdminNotifications() {
                         </Button>
                       </div>
                     )}
+
+                    {/* Edit button for approved/denied requests */}
+                    {(request.status === 'approved' || request.status === 'denied') && (
+                      <div className="pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full gap-1"
+                          onClick={() => openActionDialog(request, 'edit')}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit Request
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -276,19 +365,46 @@ export function AdminNotifications() {
         <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {action === 'approve' ? 'Approve Request' : action === 'propose' ? 'Propose Different Date' : 'Deny Request'}
+              {action === 'approve' ? 'Approve Request' : action === 'propose' ? 'Propose Different Date' : action === 'edit' ? 'Edit Request' : 'Deny Request'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {action === 'approve'
                 ? `Are you sure you want to approve the request for "${selectedRequest?.itemName}"?`
                 : action === 'propose'
                 ? `Propose a different pickup date for "${selectedRequest?.itemName}". The member will need to confirm.`
+                : action === 'edit'
+                ? `Edit the request for "${selectedRequest?.itemName}". A notification will be sent to the requester.`
                 : `Are you sure you want to deny the request for "${selectedRequest?.itemName}"?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          {/* Date Selection for Approval */}
-          {action === 'approve' && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && (
+          {/* Status Selection for Edit */}
+          {action === 'edit' && (
+            <div className="space-y-3 py-2">
+              <Label>Status</Label>
+              <RadioGroup value={editStatus} onValueChange={(v) => setEditStatus(v as 'approved' | 'denied' | 'pending' | 'pending_confirmation')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="approved" id="status-approved" />
+                  <Label htmlFor="status-approved" className="font-normal cursor-pointer">Approved</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="denied" id="status-denied" />
+                  <Label htmlFor="status-denied" className="font-normal cursor-pointer">Denied</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pending" id="status-pending" />
+                  <Label htmlFor="status-pending" className="font-normal cursor-pointer">Pending</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pending_confirmation" id="status-pending-conf" />
+                  <Label htmlFor="status-pending-conf" className="font-normal cursor-pointer">Pending Confirmation</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
+          {/* Date Selection for Approval or Edit with approved status */}
+          {(action === 'approve' || (action === 'edit' && editStatus === 'approved')) && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && (
             <div className="space-y-3 py-2">
               <Label>Select Pickup Date & Time</Label>
               <RadioGroup value={selectedDate} onValueChange={setSelectedDate}>
@@ -304,14 +420,26 @@ export function AdminNotifications() {
             </div>
           )}
 
-          {/* Date Picker for Proposing Different Date */}
-          {action === 'propose' && (
+          {/* Date Picker for Proposing Different Date or Edit with pending_confirmation */}
+          {(action === 'propose' || (action === 'edit' && editStatus === 'pending_confirmation')) && (
             <div className="space-y-3 py-2">
               <Label>Select a Date & Time to Propose</Label>
               <DateTimePicker
                 value={proposedDate}
                 onChange={setProposedDate}
                 placeholder="Select proposed pickup date/time"
+              />
+            </div>
+          )}
+
+          {/* Custom date picker for edit with approved status if no preferred dates */}
+          {action === 'edit' && editStatus === 'approved' && (!selectedRequest?.preferredDates || selectedRequest.preferredDates.length === 0) && (
+            <div className="space-y-3 py-2">
+              <Label>Select Pickup Date & Time</Label>
+              <DateTimePicker
+                value={proposedDate}
+                onChange={setProposedDate}
+                placeholder="Select pickup date/time"
               />
             </div>
           )}
@@ -333,11 +461,12 @@ export function AdminNotifications() {
               disabled={
                 isProcessing || 
                 (action === 'approve' && selectedRequest?.preferredDates && selectedRequest.preferredDates.length > 0 && !selectedDate) ||
-                (action === 'propose' && !proposedDate)
+                (action === 'propose' && !proposedDate) ||
+                (action === 'edit' && editStatus === 'pending_confirmation' && !proposedDate)
               }
               className={action === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
-              {action === 'approve' ? 'Approve' : action === 'propose' ? 'Send Proposal' : 'Deny'}
+              {action === 'approve' ? 'Approve' : action === 'propose' ? 'Send Proposal' : action === 'edit' ? 'Save & Notify' : 'Deny'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
