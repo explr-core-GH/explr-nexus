@@ -16,7 +16,8 @@ import {
   BookOpen,
   FolderOpen,
   Package,
-  UserPlus
+  UserPlus,
+  MessageSquare
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,8 @@ import { CategoryManagement } from '@/components/CategoryManagement';
 import { BundleManagement } from '@/components/BundleManagement';
 import { useBundles } from '@/hooks/useBundles';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
+import { useItemRequests } from '@/hooks/useItemRequests';
+import { AdminRequestsPanel } from '@/components/AdminRequestsPanel';
 import { format } from 'date-fns';
 
 const Admin = () => {
@@ -71,6 +74,7 @@ const Admin = () => {
   const { locations, isLoading: locationsLoading, addLocation, deleteLocation } = useLocations();
   const { items, isLoading: itemsLoading } = useInventoryDB();
   const { bundles, isLoading: bundlesLoading, createBundle, updateBundle, deleteBundle } = useBundles();
+  const { requests, pendingCount } = useItemRequests();
   const [searchQuery, setSearchQuery] = useState('');
   const [locationSearchQuery, setLocationSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -154,10 +158,19 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="gap-2 relative">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Requests</span>
+              {pendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center">
+                  {pendingCount}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="locations" className="gap-2">
               <MapPin className="h-4 w-4" />
@@ -385,6 +398,22 @@ const Admin = () => {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Requests Tab */}
+          <TabsContent value="requests" className="space-y-6 mt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-accent/10">
+                <MessageSquare className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Item Requests</h2>
+                <p className="text-muted-foreground">
+                  Manage item requests from members
+                </p>
+              </div>
+            </div>
+            <AdminRequestsPanel />
           </TabsContent>
 
           {/* Locations Tab */}
