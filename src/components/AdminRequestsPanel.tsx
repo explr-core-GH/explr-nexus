@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil, Search } from 'lucide-react';
+import { Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 export function AdminRequestsPanel() {
   const { requests, updateRequest, deleteRequest, loading } = useItemRequests();
   const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
-  const [action, setAction] = useState<'approve' | 'deny' | 'propose' | 'edit' | null>(null);
+  const [action, setAction] = useState<'approve' | 'deny' | 'propose' | 'edit' | 'delete' | null>(null);
   const [response, setResponse] = useState('');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [proposedDate, setProposedDate] = useState<Date | undefined>(undefined);
@@ -40,6 +40,8 @@ export function AdminRequestsPanel() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<ItemRequest | null>(null);
   const { toast } = useToast();
 
   const sendNotification = async (request: ItemRequest, newStatus: string, adminResponse?: string, confirmedDate?: string, proposedDateStr?: string) => {
@@ -377,15 +379,43 @@ export function AdminRequestsPanel() {
               )}
 
               {(request.status === 'approved' || request.status === 'denied') && (
-                <div className="pt-2">
+                <div className="pt-2 flex gap-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full gap-1"
+                    className="flex-1 gap-1"
                     onClick={() => openActionDialog(request, 'edit')}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                    Edit Request
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      setRequestToDelete(request);
+                      setDeleteConfirmOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              {request.status === 'pending' && (
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      setRequestToDelete(request);
+                      setDeleteConfirmOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
                   </Button>
                 </div>
               )}
@@ -504,6 +534,33 @@ export function AdminRequestsPanel() {
               className={action === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
               {action === 'approve' ? 'Approve' : action === 'propose' ? 'Send Proposal' : action === 'edit' ? 'Save & Notify' : 'Deny'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the request for "{requestToDelete?.itemName}" from {requestToDelete?.requesterName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRequestToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (requestToDelete) {
+                  await deleteRequest(requestToDelete.id);
+                  setRequestToDelete(null);
+                  setDeleteConfirmOpen(false);
+                }
+              }}
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

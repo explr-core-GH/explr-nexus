@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,8 @@ interface EditItemDialogProps {
     tags?: string[];
     status?: string;
     checkedOutBy?: string;
+    isConsumable?: boolean;
+    quantity?: number;
   };
   locations?: Location[];
   users?: SelectableUser[];
@@ -51,6 +54,8 @@ interface EditItemDialogProps {
     image_url: string | null;
     tags?: string[];
     checked_out_by?: string | null;
+    is_consumable?: boolean;
+    quantity?: number;
   }) => Promise<boolean>;
   trigger?: React.ReactNode;
 }
@@ -65,6 +70,8 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
   const [imageUrl, setImageUrl] = useState<string | null>(item.imageUrl || null);
   const [tags, setTags] = useState<string[]>(item.tags || []);
   const [assignedToName, setAssignedToName] = useState<string>(item.checkedOutBy || '');
+  const [isConsumable, setIsConsumable] = useState(item.isConsumable ?? false);
+  const [quantity, setQuantity] = useState<number>(item.quantity ?? 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -79,6 +86,8 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
     setImageUrl(item.imageUrl || null);
     setTags(item.tags || []);
     setAssignedToName(item.checkedOutBy || '');
+    setIsConsumable(item.isConsumable ?? false);
+    setQuantity(item.quantity ?? 1);
   }, [item]);
 
   const handleLocationChange = (locId: string) => {
@@ -107,6 +116,8 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
         location_id: locationId || null,
         image_url: imageUrl,
         tags,
+        is_consumable: isConsumable,
+        quantity: quantity > 0 ? quantity : 1,
       };
       
       // Only include checked_out_by if item is checked out
@@ -231,6 +242,37 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
               Select which member groups can see this item
             </p>
             <TagsCheckboxGroup selectedTags={tags} onTagsChange={setTags} />
+          </div>
+          {/* Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-quantity">Quantity</Label>
+            <Input
+              id="edit-quantity"
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              placeholder="1"
+            />
+          </div>
+          {/* Consumable checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="edit-consumable"
+              checked={isConsumable}
+              onCheckedChange={(checked) => setIsConsumable(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="edit-consumable"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Consumable Item
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                When checked out, quantity decreases. Item is removed when depleted.
+              </p>
+            </div>
           </div>
           <div className="flex gap-3 pt-4">
             <Button 
