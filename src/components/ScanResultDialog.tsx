@@ -26,7 +26,7 @@ interface ScanResultDialogProps {
   users?: SelectableUser[];
   onOpenChange: (open: boolean) => void;
   onCheckIn: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
-  onCheckOut: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, userName: string, locationId?: string, bundleItemIds?: string[], selectedUserId?: string) => Promise<boolean> | boolean;
   onMaintenance?: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
   isAdmin?: boolean;
   canCheckInOut?: boolean;
@@ -64,7 +64,7 @@ export function ScanResultDialog({
       let success = false;
       const newLocationId = locationId || undefined;
       if (action === 'check-out') {
-        success = await onCheckOut(item.id, selectedUserName, newLocationId);
+        success = await onCheckOut(item.id, selectedUserName, newLocationId, undefined, selectedUserId || undefined);
       } else if (action === 'check-in' || action === 'return-from-maintenance') {
         success = await onCheckIn(item.id, selectedUserName, newLocationId);
       } else if (action === 'maintenance' && onMaintenance) {

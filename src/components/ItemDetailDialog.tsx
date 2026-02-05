@@ -40,7 +40,7 @@ interface ItemDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCheckIn: (itemId: string, userName: string) => Promise<boolean> | boolean;
-  onCheckOut: (itemId: string, userName: string, bundleItemIds?: string[]) => Promise<boolean> | boolean;
+  onCheckOut: (itemId: string, userName: string, bundleItemIds?: string[], selectedUserId?: string) => Promise<boolean> | boolean;
   onDelete: (itemId: string) => Promise<void> | void;
   onUpdate?: (id: string, updates: {
     name: string;
@@ -137,7 +137,7 @@ export function ItemDetailDialog({
           bundleItemIds = getBundleItemIds();
         }
         
-        await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds);
+        await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds, selectedUserId || undefined);
       } else if (item.status === 'checked-out') {
         await onCheckIn(item.id, selectedUserName.trim());
       }

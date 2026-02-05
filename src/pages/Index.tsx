@@ -185,8 +185,8 @@ const Index = () => {
     return result;
   };
 
-  const handleCheckOut = async (itemId: string, selectedUserName: string, locationId?: string, bundleItemIds?: string[]) => {
-    const result = await checkOut(itemId, selectedUserName, locationId, locations, 1, bundleItemIds);
+  const handleCheckOut = async (itemId: string, selectedUserName: string, locationId?: string, bundleItemIds?: string[], selectedUserId?: string) => {
+    const result = await checkOut(itemId, selectedUserName, locationId, locations, 1, bundleItemIds, selectedUserId);
     if (result && scannedItem) {
       const newLocation = locationId ? locations.find(l => l.id === locationId) : null;
       setScannedItem({ 
@@ -427,7 +427,7 @@ const Index = () => {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onCheckIn={(itemId, selectedUserName) => checkIn(itemId, selectedUserName)}
-        onCheckOut={(itemId, selectedUserName, bundleItemIds) => checkOut(itemId, selectedUserName, undefined, locations, 1, bundleItemIds)}
+        onCheckOut={(itemId, selectedUserName, bundleItemIds, selectedUserId) => checkOut(itemId, selectedUserName, undefined, locations, 1, bundleItemIds, selectedUserId)}
         onDelete={handleDelete}
         onUpdate={updateItem}
         locations={locations}
