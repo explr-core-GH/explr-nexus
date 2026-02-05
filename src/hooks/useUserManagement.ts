@@ -14,6 +14,9 @@ export interface UserWithRole {
   isAdmin: boolean;
   role: AppRole | null; // null means no role assigned
   tags: string[]; // visibility tags for members
+  organization_address: string | null;
+  organization_latitude: number | null;
+  organization_longitude: number | null;
 }
 
 export function useUserManagement() {
@@ -70,6 +73,9 @@ export function useUserManagement() {
           isAdmin,
           role,
           tags,
+          organization_address: profile.organization_address,
+          organization_latitude: profile.organization_latitude ? Number(profile.organization_latitude) : null,
+          organization_longitude: profile.organization_longitude ? Number(profile.organization_longitude) : null,
         };
       });
 
@@ -237,11 +243,64 @@ export function useUserManagement() {
     }
   };
 
+  const updateUserLocation = async (
+    userId: string, 
+    userName: string, 
+    address: string, 
+    latitude: number | null, 
+    longitude: number | null
+  ) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can update user locations',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          organization_address: address,
+          organization_latitude: latitude,
+          organization_longitude: longitude,
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Location Updated',
+        description: `${userName}'s location has been updated`,
+      });
+
+      // Update local state
+      setUsers(prev => prev.map(u => 
+        u.user_id === userId 
+          ? { ...u, organization_address: address, organization_latitude: latitude, organization_longitude: longitude } 
+          : u
+      ));
+
+      return true;
+    } catch (error) {
+      console.error('Error updating user location:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user location',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
     users,
     isLoading,
     setUserRole,
     updateUserTags,
+    updateUserLocation,
     deleteUser,
     promoteToAdmin,
     removeAdmin,
