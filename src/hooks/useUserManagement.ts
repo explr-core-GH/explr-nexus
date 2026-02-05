@@ -14,6 +14,7 @@ export interface UserWithRole {
   isAdmin: boolean;
   role: AppRole | null; // null means no role assigned
   tags: string[]; // visibility tags for members
+  organization_name: string | null;
   organization_address: string | null;
   organization_latitude: number | null;
   organization_longitude: number | null;
@@ -73,6 +74,7 @@ export function useUserManagement() {
           isAdmin,
           role,
           tags,
+          organization_name: profile.organization_name,
           organization_address: profile.organization_address,
           organization_latitude: profile.organization_latitude ? Number(profile.organization_latitude) : null,
           organization_longitude: profile.organization_longitude ? Number(profile.organization_longitude) : null,

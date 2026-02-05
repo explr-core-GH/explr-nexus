@@ -8,7 +8,7 @@ import { useEducatorLocations, EducatorLocation } from '@/hooks/useEducatorLocat
 interface LocationsMapProps {
   locations: Location[];
   items: InventoryItem[];
-  onLocationClick?: (location: Location, locationItems: InventoryItem[]) => void;
+  onLocationClick?: (location: Location) => void;
 }
 
 // Fix default marker icons
@@ -124,7 +124,7 @@ export function LocationsMap({ locations, items, onLocationClick }: LocationsMap
 
         marker.on('click', () => {
           if (onLocationClick) {
-            onLocationClick(location, locationItems);
+            onLocationClick(location);
           }
         });
 
