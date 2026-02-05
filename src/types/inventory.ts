@@ -15,6 +15,7 @@ export interface InventoryItem {
   tags?: string[];
   quantity?: number;
   isConsumable?: boolean;
+  isAtEducatorLocation?: boolean;
   createdAt: string;
   lastUpdated: string;
 }
