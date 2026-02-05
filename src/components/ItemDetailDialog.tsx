@@ -176,12 +176,14 @@ export function ItemDetailDialog({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Item Image */}
         {item.imageUrl && (
-          <div className="aspect-video w-full overflow-hidden rounded-lg bg-secondary -mt-2 mb-2">
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-secondary -mt-2 mb-2">
             <img 
               src={item.imageUrl} 
               alt={item.name}
               className="w-full h-full object-cover"
             />
+            {/* Gradient overlay for better text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/20" />
           </div>
         )}
         
