@@ -320,7 +320,7 @@ export function useInventoryDB() {
         setItems(prev =>
           prev.map(i =>
             allItemIds.includes(i.id)
-              ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+              ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
               : i
           )
         );
@@ -439,7 +439,7 @@ export function useInventoryDB() {
       setItems(prev =>
         prev.map(i =>
           i.id === itemId
-            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
+            ? { ...i, status: 'checked-out' as const, checked_out_by: user.id, checked_out_by_name: userName, checked_out_at: new Date().toISOString(), ...(newLocation && { location: newLocation.name, location_id: newLocationId }) }
             : i
         )
       );
