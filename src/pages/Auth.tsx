@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
-import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -19,7 +19,7 @@ interface FormErrors {
   fullName?: string;
   organizationName?: string;
   position?: string;
-  organizationAddress?: string;
+  
   accessCode?: string;
 }
 
@@ -41,9 +41,6 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [organizationName, setOrganizationName] = useState('');
   const [position, setPosition] = useState('');
-  const [organizationAddress, setOrganizationAddress] = useState('');
-  const [organizationLatitude, setOrganizationLatitude] = useState<number | undefined>();
-  const [organizationLongitude, setOrganizationLongitude] = useState<number | undefined>();
   const [accessCode, setAccessCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -71,11 +68,6 @@ const Auth = () => {
       }
       if (!position.trim()) {
         newErrors.position = 'Position is required';
-      }
-      if (!organizationAddress.trim()) {
-        newErrors.organizationAddress = 'School/Organization address is required';
-      } else if (!organizationLatitude || !organizationLongitude) {
-        newErrors.organizationAddress = 'Please select a valid address from the suggestions';
       }
     }
     
@@ -114,7 +106,6 @@ const Auth = () => {
               full_name: fullName,
               organization_name: organizationName,
               position: position,
-              organization_address: organizationAddress,
             },
           },
         });
@@ -128,9 +119,6 @@ const Auth = () => {
             .update({
               organization_name: organizationName,
               position: position,
-              organization_address: organizationAddress,
-              organization_latitude: organizationLatitude,
-              organization_longitude: organizationLongitude,
             })
             .eq('user_id', data.user.id);
           
@@ -277,21 +265,6 @@ const Auth = () => {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="organizationAddress">School/Organization Address *</Label>
-                    <AddressAutocomplete
-                      value={organizationAddress}
-                      onChange={(address, lat, lng) => {
-                        setOrganizationAddress(address);
-                        setOrganizationLatitude(lat);
-                        setOrganizationLongitude(lng);
-                      }}
-                      placeholder="Start typing to search for your address..."
-                    />
-                    {errors.organizationAddress && (
-                      <p className="text-sm text-destructive">{errors.organizationAddress}</p>
-                    )}
-                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="accessCode">Access Code (Optional)</Label>
