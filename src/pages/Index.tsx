@@ -8,7 +8,8 @@ import {
   Wrench,
   ShieldAlert,
   BookOpen,
-  MessageSquare
+  MessageSquare,
+  Download
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -217,6 +218,63 @@ const Index = () => {
     await deleteItem(itemId);
   };
 
+  const escapeExcelCell = (value: unknown) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+  const formatDate = (value: string | null) => value ? new Date(value).toLocaleString() : '';
+
+  const handleExportInventory = () => {
+    const headers = [
+      'Name',
+      'Description',
+      'Category',
+      'Status',
+      'QR Code',
+      'Location',
+      'Checked Out By',
+      'Checked Out At',
+      'Quantity',
+      'Consumable',
+      'Tags',
+      'Created At',
+      'Last Updated',
+    ];
+
+    const rows = items.map(item => [
+      item.name,
+      item.description,
+      item.category,
+      item.status,
+      item.qr_code,
+      item.location,
+      item.checked_out_by_name,
+      formatDate(item.checked_out_at),
+      item.quantity ?? '',
+      item.is_consumable ? 'Yes' : 'No',
+      item.tags?.join(', ') ?? '',
+      formatDate(item.created_at),
+      formatDate(item.updated_at),
+    ]);
+
+    const tableRows = [headers, ...rows]
+      .map(row => `<tr>${row.map(cell => `<td>${escapeExcelCell(cell)}</td>`).join('')}</tr>`)
+      .join('');
+
+    const workbook = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${tableRows}</table></body></html>`;
+    const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `inventory-export-${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Convert DB item to UI format for dialogs
   const convertToUIItem = (item: InventoryItem) => {
     // Determine if item is at an educator location (checked out and location changed to educator's org)
@@ -388,6 +446,10 @@ const Index = () => {
             </Select>
             {isAdmin && (
               <>
+                <Button variant="outline" onClick={handleExportInventory} disabled={items.length === 0}>
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export Excel</span>
+                </Button>
                 <CSVImportDialog onImport={bulkAddItems} />
                 <AddItemDialog onAdd={handleAddItem} locations={locations} />
               </>
