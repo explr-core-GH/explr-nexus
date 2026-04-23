@@ -224,10 +224,15 @@ const Index = () => {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+  const imageCell = (imageUrl: string | null) => imageUrl
+    ? `<td style="height:90px;width:110px"><img src="${escapeExcelCell(imageUrl)}" alt="Item image" style="max-height:80px;max-width:100px" /></td>`
+    : '<td></td>';
+
   const formatDate = (value: string | null) => value ? new Date(value).toLocaleString() : '';
 
   const handleExportInventory = () => {
     const headers = [
+      'Image',
       'Name',
       'Description',
       'Category',
@@ -259,11 +264,12 @@ const Index = () => {
       formatDate(item.updated_at),
     ]);
 
-    const tableRows = [headers, ...rows]
-      .map(row => `<tr>${row.map(cell => `<td>${escapeExcelCell(cell)}</td>`).join('')}</tr>`)
-      .join('');
+    const headerRow = `<tr>${headers.map(cell => `<th>${escapeExcelCell(cell)}</th>`).join('')}</tr>`;
+    const itemRows = items.map((item, index) => (
+      `<tr>${imageCell(item.image_url)}${rows[index].map(cell => `<td>${escapeExcelCell(cell)}</td>`).join('')}</tr>`
+    )).join('');
 
-    const workbook = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${tableRows}</table></body></html>`;
+    const workbook = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${headerRow}${itemRows}</table></body></html>`;
     const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
