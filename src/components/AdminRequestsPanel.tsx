@@ -328,6 +328,53 @@ export function AdminRequestsPanel() {
                 </div>
               )}
 
+              {(request.freeReducedLunch ||
+                request.numberOfStudents !== null ||
+                request.usageHours !== null ||
+                request.usageDays !== null ||
+                (request.specialGroups && request.specialGroups.length > 0)) && (
+                <div className="p-2 bg-secondary/40 rounded text-sm space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    Student Details
+                  </div>
+                  {request.freeReducedLunch && (
+                    <div className="flex items-center gap-1.5">
+                      <Utensils className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Free/Reduced Lunch:</span>
+                      <span className="capitalize font-medium">{request.freeReducedLunch}</span>
+                    </div>
+                  )}
+                  {request.numberOfStudents !== null && (
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Students:</span>
+                      <span className="font-medium">{request.numberOfStudents}</span>
+                    </div>
+                  )}
+                  {(request.usageHours !== null || request.usageDays !== null) && (
+                    <div className="flex items-center gap-1.5">
+                      <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Usage:</span>
+                      <span className="font-medium">
+                        {request.usageHours !== null && `${request.usageHours} hrs`}
+                        {request.usageHours !== null && request.usageDays !== null && ' • '}
+                        {request.usageDays !== null && `${request.usageDays} days`}
+                      </span>
+                    </div>
+                  )}
+                  {request.specialGroups && request.specialGroups.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {request.specialGroups.map((g) => (
+                        <Badge key={g} variant="secondary" className="text-xs">
+                          {g}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {request.message && (
                 <div className="p-2 bg-secondary/50 rounded text-sm">
                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
