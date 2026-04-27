@@ -328,6 +328,8 @@ export function AdminRequestsPanel() {
                 </div>
               )}
 
+              <ReturnDueDateRow request={request} updateRequest={updateRequest} />
+
               {(request.freeReducedLunch ||
                 request.numberOfStudents !== null ||
                 request.usageHours !== null ||
