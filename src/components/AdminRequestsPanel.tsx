@@ -43,6 +43,7 @@ export function AdminRequestsPanel() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<ItemRequest | null>(null);
+  const [demographicsRequest, setDemographicsRequest] = useState<ItemRequest | null>(null);
   const { toast } = useToast();
 
   const sendNotification = async (request: ItemRequest, newStatus: string, adminResponse?: string, confirmedDate?: string, proposedDateStr?: string) => {
