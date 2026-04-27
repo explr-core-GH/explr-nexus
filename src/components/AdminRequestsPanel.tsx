@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil, Search, Trash2, Users, GraduationCap, Utensils, Timer } from 'lucide-react';
+import { Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil, Search, Trash2, Users, GraduationCap, Utensils, Timer, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
