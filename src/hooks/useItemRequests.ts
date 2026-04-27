@@ -195,6 +195,43 @@ export function useItemRequests() {
     }
   };
 
+  const updateDemographics = async (
+    requestId: string,
+    demographics: Partial<RequestDemographics>
+  ): Promise<boolean> => {
+    try {
+      const payload: any = {};
+      if (demographics.freeReducedLunch !== undefined) payload.free_reduced_lunch = demographics.freeReducedLunch || null;
+      if (demographics.specialGroups !== undefined) payload.special_groups = demographics.specialGroups;
+      if (demographics.numberOfStudents !== undefined) payload.number_of_students = demographics.numberOfStudents ?? null;
+      if (demographics.usageHours !== undefined) payload.usage_hours = demographics.usageHours ?? null;
+      if (demographics.usageDays !== undefined) payload.usage_days = demographics.usageDays ?? null;
+
+      const { error } = await supabase
+        .from('item_requests')
+        .update(payload)
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Student Data Updated',
+        description: 'The demographic information has been saved.',
+      });
+
+      await fetchRequests();
+      return true;
+    } catch (error: any) {
+      console.error('Error updating demographics:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update student data. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const confirmProposedDate = async (requestId: string, accept: boolean): Promise<boolean> => {
     try {
       if (accept) {
@@ -285,6 +322,7 @@ export function useItemRequests() {
     pendingCount,
     createRequest,
     updateRequest,
+    updateDemographics,
     deleteRequest,
     confirmProposedDate,
     refetch: fetchRequests,
