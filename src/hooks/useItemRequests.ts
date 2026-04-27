@@ -21,6 +21,8 @@ export interface ItemRequest {
   numberOfStudents: number | null;
   usageHours: number | null;
   usageDays: number | null;
+  returnDueDate: string | null;
+  returnReminderSentAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
