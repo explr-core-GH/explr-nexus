@@ -176,8 +176,20 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
             />
           </div>
 
-          <div className="space-y-3 p-3 border rounded-lg bg-card">
-            <h4 className="text-sm font-semibold">Student Information</h4>
+          <div className="space-y-2">
+            <Label>
+              Return Due Date <span className="text-destructive">*</span>
+            </Label>
+            <DateTimePicker
+              value={returnDueDate}
+              onChange={setReturnDueDate}
+              placeholder="Select when you'll return the item"
+            />
+            <p className="text-xs text-muted-foreground">
+              We'll send you an email reminder one day before this date.
+            </p>
+          </div>
+
 
             <div className="space-y-2">
               <Label>
