@@ -87,13 +87,14 @@ export function useItemRequests() {
     requesterEmail: string | null,
     requesterOrganization: string | null,
     message?: string,
-    preferredDates?: Date[]
+    preferredDates?: Date[],
+    demographics?: RequestDemographics
   ): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.from('item_requests').insert({
+      const insertPayload: any = {
         item_id: itemId,
         item_name: itemName,
         requester_id: user.id,
@@ -102,7 +103,17 @@ export function useItemRequests() {
         requester_organization: requesterOrganization,
         message: message || null,
         preferred_dates: preferredDates?.map(d => d.toISOString()) || [],
-      });
+      };
+
+      if (demographics) {
+        insertPayload.free_reduced_lunch = demographics.freeReducedLunch;
+        insertPayload.special_groups = demographics.specialGroups;
+        insertPayload.number_of_students = demographics.numberOfStudents;
+        insertPayload.usage_hours = demographics.usageHours;
+        insertPayload.usage_days = demographics.usageDays;
+      }
+
+      const { error } = await supabase.from('item_requests').insert(insertPayload);
 
       if (error) throw error;
 
