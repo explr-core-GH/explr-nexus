@@ -63,6 +63,7 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
   const resetForm = () => {
     setMessage('');
     setPreferredDates([]);
+    setReturnDueDate(undefined);
     setFreeReducedLunch('');
     setSpecialGroups([]);
     setNumberOfStudents('');
