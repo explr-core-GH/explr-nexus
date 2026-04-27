@@ -118,6 +118,10 @@ export function useItemRequests() {
         insertPayload.usage_days = demographics.usageDays;
       }
 
+      if (returnDueDate) {
+        insertPayload.return_due_date = returnDueDate.toISOString();
+      }
+
       const { error } = await supabase.from('item_requests').insert(insertPayload);
 
       if (error) throw error;
