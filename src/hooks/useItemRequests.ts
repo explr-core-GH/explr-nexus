@@ -92,7 +92,8 @@ export function useItemRequests() {
     requesterOrganization: string | null,
     message?: string,
     preferredDates?: Date[],
-    demographics?: RequestDemographics
+    demographics?: RequestDemographics,
+    returnDueDate?: Date | null
   ): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
