@@ -16,8 +16,21 @@ export interface ItemRequest {
   preferredDates: string[];
   confirmedDate: string | null;
   adminProposedDate: string | null;
+  freeReducedLunch: string | null;
+  specialGroups: string[];
+  numberOfStudents: number | null;
+  usageHours: number | null;
+  usageDays: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RequestDemographics {
+  freeReducedLunch: string;
+  specialGroups: string[];
+  numberOfStudents: number;
+  usageHours: number;
+  usageDays: number;
 }
 
 export function useItemRequests() {
