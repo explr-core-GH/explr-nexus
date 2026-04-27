@@ -48,7 +48,7 @@ export function useItemRequests() {
 
       if (error) throw error;
 
-      const mapped: ItemRequest[] = (data || []).map((r) => ({
+      const mapped: ItemRequest[] = (data || []).map((r: any) => ({
         id: r.id,
         itemId: r.item_id,
         itemName: r.item_name,
@@ -62,6 +62,11 @@ export function useItemRequests() {
         preferredDates: (r.preferred_dates as string[]) || [],
         confirmedDate: r.confirmed_date,
         adminProposedDate: r.admin_proposed_date,
+        freeReducedLunch: r.free_reduced_lunch ?? null,
+        specialGroups: (r.special_groups as string[]) || [],
+        numberOfStudents: r.number_of_students ?? null,
+        usageHours: r.usage_hours !== null && r.usage_hours !== undefined ? Number(r.usage_hours) : null,
+        usageDays: r.usage_days !== null && r.usage_days !== undefined ? Number(r.usage_days) : null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
