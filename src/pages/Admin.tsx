@@ -657,6 +657,9 @@ const Admin = () => {
                 </TableBody>
               </Table>
             </div>
+
+            {/* Impact Dashboard */}
+            <ImpactDashboard />
           </TabsContent>
 
           {/* Bundles Tab */}
