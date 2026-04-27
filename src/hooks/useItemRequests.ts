@@ -149,17 +149,26 @@ export function useItemRequests() {
     status: 'approved' | 'denied' | 'pending_confirmation' | 'pending',
     adminResponse?: string,
     confirmedDate?: string,
-    adminProposedDate?: string
+    adminProposedDate?: string,
+    returnDueDate?: string | null
   ): Promise<boolean> => {
     try {
+      const updatePayload: any = {
+        status,
+        admin_response: adminResponse || null,
+        confirmed_date: confirmedDate || null,
+        admin_proposed_date: adminProposedDate || null,
+      };
+
+      if (returnDueDate !== undefined) {
+        updatePayload.return_due_date = returnDueDate;
+        // Reset reminder flag when due date changes
+        updatePayload.return_reminder_sent_at = null;
+      }
+
       const { error } = await supabase
         .from('item_requests')
-        .update({
-          status,
-          admin_response: adminResponse || null,
-          confirmed_date: confirmedDate || null,
-          admin_proposed_date: adminProposedDate || null,
-        })
+        .update(updatePayload)
         .eq('id', requestId);
 
       if (error) throw error;
