@@ -637,6 +637,12 @@ export function AdminRequestsPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditDemographicsDialog
+        request={demographicsRequest}
+        open={!!demographicsRequest}
+        onOpenChange={(o) => { if (!o) setDemographicsRequest(null); }}
+      />
     </div>
   );
 }
