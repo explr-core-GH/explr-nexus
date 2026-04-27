@@ -43,6 +43,7 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [preferredDates, setPreferredDates] = useState<Date[]>([]);
+  const [returnDueDate, setReturnDueDate] = useState<Date | undefined>(undefined);
   const [freeReducedLunch, setFreeReducedLunch] = useState<string>('');
   const [specialGroups, setSpecialGroups] = useState<string[]>([]);
   const [numberOfStudents, setNumberOfStudents] = useState<string>('');
