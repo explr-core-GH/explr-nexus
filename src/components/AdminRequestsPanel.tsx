@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { DateTimePicker } from '@/components/DateTimePicker';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { EditDemographicsDialog } from '@/components/EditDemographicsDialog';
 
 export function AdminRequestsPanel() {
   const { requests, updateRequest, deleteRequest, loading } = useItemRequests();
