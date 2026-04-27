@@ -114,6 +114,15 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
       return;
     }
 
+    if (!returnDueDate) {
+      toast({
+        title: 'Missing information',
+        description: 'Please pick a return due date.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     const success = await createRequest(
       item.id,
@@ -129,7 +138,8 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
         numberOfStudents: numStudents,
         usageHours: numHours,
         usageDays: numDays,
-      }
+      },
+      returnDueDate
     );
 
     if (success) {
