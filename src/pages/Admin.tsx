@@ -57,6 +57,7 @@ import { useInventoryDB, InventoryItem } from '@/hooks/useInventoryDB';
 import { UserMenu } from '@/components/UserMenu';
 import { AddLocationDialog } from '@/components/AddLocationDialog';
 import { LocationsMap } from '@/components/LocationsMap';
+import { ImpactDashboard } from '@/components/ImpactDashboard';
 import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { ResourceManagement } from '@/components/ResourceManagement';
@@ -656,6 +657,9 @@ const Admin = () => {
                 </TableBody>
               </Table>
             </div>
+
+            {/* Impact Dashboard */}
+            <ImpactDashboard />
           </TabsContent>
 
           {/* Bundles Tab */}
