@@ -69,6 +69,8 @@ export function useItemRequests() {
         numberOfStudents: r.number_of_students ?? null,
         usageHours: r.usage_hours !== null && r.usage_hours !== undefined ? Number(r.usage_hours) : null,
         usageDays: r.usage_days !== null && r.usage_days !== undefined ? Number(r.usage_days) : null,
+        returnDueDate: r.return_due_date ?? null,
+        returnReminderSentAt: r.return_reminder_sent_at ?? null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
