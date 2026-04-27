@@ -21,6 +21,8 @@ export interface ItemRequest {
   numberOfStudents: number | null;
   usageHours: number | null;
   usageDays: number | null;
+  returnDueDate: string | null;
+  returnReminderSentAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +69,8 @@ export function useItemRequests() {
         numberOfStudents: r.number_of_students ?? null,
         usageHours: r.usage_hours !== null && r.usage_hours !== undefined ? Number(r.usage_hours) : null,
         usageDays: r.usage_days !== null && r.usage_days !== undefined ? Number(r.usage_days) : null,
+        returnDueDate: r.return_due_date ?? null,
+        returnReminderSentAt: r.return_reminder_sent_at ?? null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
@@ -88,7 +92,8 @@ export function useItemRequests() {
     requesterOrganization: string | null,
     message?: string,
     preferredDates?: Date[],
-    demographics?: RequestDemographics
+    demographics?: RequestDemographics,
+    returnDueDate?: Date | null
   ): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -111,6 +116,10 @@ export function useItemRequests() {
         insertPayload.number_of_students = demographics.numberOfStudents;
         insertPayload.usage_hours = demographics.usageHours;
         insertPayload.usage_days = demographics.usageDays;
+      }
+
+      if (returnDueDate) {
+        insertPayload.return_due_date = returnDueDate.toISOString();
       }
 
       const { error } = await supabase.from('item_requests').insert(insertPayload);
@@ -140,17 +149,26 @@ export function useItemRequests() {
     status: 'approved' | 'denied' | 'pending_confirmation' | 'pending',
     adminResponse?: string,
     confirmedDate?: string,
-    adminProposedDate?: string
+    adminProposedDate?: string,
+    returnDueDate?: string | null
   ): Promise<boolean> => {
     try {
+      const updatePayload: any = {
+        status,
+        admin_response: adminResponse || null,
+        confirmed_date: confirmedDate || null,
+        admin_proposed_date: adminProposedDate || null,
+      };
+
+      if (returnDueDate !== undefined) {
+        updatePayload.return_due_date = returnDueDate;
+        // Reset reminder flag when due date changes
+        updatePayload.return_reminder_sent_at = null;
+      }
+
       const { error } = await supabase
         .from('item_requests')
-        .update({
-          status,
-          admin_response: adminResponse || null,
-          confirmed_date: confirmedDate || null,
-          admin_proposed_date: adminProposedDate || null,
-        })
+        .update(updatePayload)
         .eq('id', requestId);
 
       if (error) throw error;

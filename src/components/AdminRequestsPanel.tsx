@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil, Search, Trash2, Users, GraduationCap, Utensils, Timer } from 'lucide-react';
+import { Check, X, Mail, Building, Clock, MessageSquare, CalendarIcon, CalendarPlus, Pencil, Search, Trash2, Users, GraduationCap, Utensils, Timer, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -328,6 +328,8 @@ export function AdminRequestsPanel() {
                 </div>
               )}
 
+              <ReturnDueDateRow request={request} updateRequest={updateRequest} />
+
               {(request.freeReducedLunch ||
                 request.numberOfStudents !== null ||
                 request.usageHours !== null ||
@@ -612,6 +614,134 @@ export function AdminRequestsPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+interface ReturnDueDateRowProps {
+  request: ItemRequest;
+  updateRequest: (
+    requestId: string,
+    status: 'approved' | 'denied' | 'pending_confirmation' | 'pending',
+    adminResponse?: string,
+    confirmedDate?: string,
+    adminProposedDate?: string,
+    returnDueDate?: string | null
+  ) => Promise<boolean>;
+}
+
+function ReturnDueDateRow({ request, updateRequest }: ReturnDueDateRowProps) {
+  const [editing, setEditing] = useState(false);
+  const [draftDate, setDraftDate] = useState<Date | undefined>(
+    request.returnDueDate ? new Date(request.returnDueDate) : undefined
+  );
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await updateRequest(
+      request.id,
+      request.status,
+      request.adminResponse || undefined,
+      request.confirmedDate || undefined,
+      request.adminProposedDate || undefined,
+      draftDate ? draftDate.toISOString() : null
+    );
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const handleClear = async () => {
+    setSaving(true);
+    await updateRequest(
+      request.id,
+      request.status,
+      request.adminResponse || undefined,
+      request.confirmedDate || undefined,
+      request.adminProposedDate || undefined,
+      null
+    );
+    setSaving(false);
+    setEditing(false);
+    setDraftDate(undefined);
+  };
+
+  if (editing) {
+    return (
+      <div className="p-2 bg-warning/5 rounded text-sm border-l-2 border-warning space-y-2">
+        <div className="flex items-center gap-1.5 font-medium text-warning">
+          <CalendarClock className="h-3.5 w-3.5" />
+          Set Return Due Date
+        </div>
+        <DateTimePicker
+          value={draftDate}
+          onChange={setDraftDate}
+          placeholder="Pick a return date"
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={handleSave} disabled={saving || !draftDate} className="gap-1">
+            <Check className="h-3.5 w-3.5" />
+            Save
+          </Button>
+          {request.returnDueDate && (
+            <Button size="sm" variant="outline" onClick={handleClear} disabled={saving}>
+              Clear
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!request.returnDueDate) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full gap-1"
+        onClick={() => setEditing(true)}
+      >
+        <CalendarClock className="h-3.5 w-3.5" />
+        Set Return Due Date
+      </Button>
+    );
+  }
+
+  const due = new Date(request.returnDueDate);
+  const now = new Date();
+  const overdue = due < now;
+  const reminderSent = !!request.returnReminderSentAt;
+
+  return (
+    <div
+      className={`p-2 rounded text-sm border-l-2 ${
+        overdue
+          ? 'bg-destructive/10 border-destructive'
+          : 'bg-warning/10 border-warning'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className={`flex items-center gap-1.5 font-medium ${overdue ? 'text-destructive' : 'text-warning'}`}>
+            <CalendarClock className="h-3.5 w-3.5" />
+            Return Due {overdue ? '(OVERDUE)' : ''}
+          </div>
+          <div className="mt-1">
+            {format(due, 'EEE, MMM d, yyyy • h:mm a')}
+          </div>
+          {reminderSent && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Reminder email sent {format(new Date(request.returnReminderSentAt!), 'MMM d, h:mm a')}
+            </div>
+          )}
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(true)} className="shrink-0">
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }

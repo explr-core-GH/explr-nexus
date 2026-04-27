@@ -14,7 +14,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { PreferredDatesPicker } from '@/components/DateTimePicker';
+import { PreferredDatesPicker, DateTimePicker } from '@/components/DateTimePicker';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +43,7 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [preferredDates, setPreferredDates] = useState<Date[]>([]);
+  const [returnDueDate, setReturnDueDate] = useState<Date | undefined>(undefined);
   const [freeReducedLunch, setFreeReducedLunch] = useState<string>('');
   const [specialGroups, setSpecialGroups] = useState<string[]>([]);
   const [numberOfStudents, setNumberOfStudents] = useState<string>('');
@@ -62,6 +63,7 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
   const resetForm = () => {
     setMessage('');
     setPreferredDates([]);
+    setReturnDueDate(undefined);
     setFreeReducedLunch('');
     setSpecialGroups([]);
     setNumberOfStudents('');
@@ -112,6 +114,15 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
       return;
     }
 
+    if (!returnDueDate) {
+      toast({
+        title: 'Missing information',
+        description: 'Please pick a return due date.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     const success = await createRequest(
       item.id,
@@ -127,7 +138,8 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
         numberOfStudents: numStudents,
         usageHours: numHours,
         usageDays: numDays,
-      }
+      },
+      returnDueDate
     );
 
     if (success) {
@@ -162,6 +174,20 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
               onChange={setPreferredDates}
               maxDates={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Return Due Date <span className="text-destructive">*</span>
+            </Label>
+            <DateTimePicker
+              value={returnDueDate}
+              onChange={setReturnDueDate}
+              placeholder="Select when you'll return the item"
+            />
+            <p className="text-xs text-muted-foreground">
+              We'll send you an email reminder one day before this date.
+            </p>
           </div>
 
           <div className="space-y-3 p-3 border rounded-lg bg-card">
