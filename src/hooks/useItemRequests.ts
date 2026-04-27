@@ -16,8 +16,21 @@ export interface ItemRequest {
   preferredDates: string[];
   confirmedDate: string | null;
   adminProposedDate: string | null;
+  freeReducedLunch: string | null;
+  specialGroups: string[];
+  numberOfStudents: number | null;
+  usageHours: number | null;
+  usageDays: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RequestDemographics {
+  freeReducedLunch: string;
+  specialGroups: string[];
+  numberOfStudents: number;
+  usageHours: number;
+  usageDays: number;
 }
 
 export function useItemRequests() {
@@ -35,7 +48,7 @@ export function useItemRequests() {
 
       if (error) throw error;
 
-      const mapped: ItemRequest[] = (data || []).map((r) => ({
+      const mapped: ItemRequest[] = (data || []).map((r: any) => ({
         id: r.id,
         itemId: r.item_id,
         itemName: r.item_name,
@@ -49,6 +62,11 @@ export function useItemRequests() {
         preferredDates: (r.preferred_dates as string[]) || [],
         confirmedDate: r.confirmed_date,
         adminProposedDate: r.admin_proposed_date,
+        freeReducedLunch: r.free_reduced_lunch ?? null,
+        specialGroups: (r.special_groups as string[]) || [],
+        numberOfStudents: r.number_of_students ?? null,
+        usageHours: r.usage_hours !== null && r.usage_hours !== undefined ? Number(r.usage_hours) : null,
+        usageDays: r.usage_days !== null && r.usage_days !== undefined ? Number(r.usage_days) : null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
@@ -69,13 +87,14 @@ export function useItemRequests() {
     requesterEmail: string | null,
     requesterOrganization: string | null,
     message?: string,
-    preferredDates?: Date[]
+    preferredDates?: Date[],
+    demographics?: RequestDemographics
   ): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.from('item_requests').insert({
+      const insertPayload: any = {
         item_id: itemId,
         item_name: itemName,
         requester_id: user.id,
@@ -84,7 +103,17 @@ export function useItemRequests() {
         requester_organization: requesterOrganization,
         message: message || null,
         preferred_dates: preferredDates?.map(d => d.toISOString()) || [],
-      });
+      };
+
+      if (demographics) {
+        insertPayload.free_reduced_lunch = demographics.freeReducedLunch;
+        insertPayload.special_groups = demographics.specialGroups;
+        insertPayload.number_of_students = demographics.numberOfStudents;
+        insertPayload.usage_hours = demographics.usageHours;
+        insertPayload.usage_days = demographics.usageDays;
+      }
+
+      const { error } = await supabase.from('item_requests').insert(insertPayload);
 
       if (error) throw error;
 
