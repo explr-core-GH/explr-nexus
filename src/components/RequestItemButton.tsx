@@ -190,6 +190,8 @@ export function RequestItemButton({ item }: RequestItemButtonProps) {
             </p>
           </div>
 
+          <div className="space-y-3 p-3 border rounded-lg bg-card">
+            <h4 className="text-sm font-semibold">Student Information</h4>
 
             <div className="space-y-2">
               <Label>
