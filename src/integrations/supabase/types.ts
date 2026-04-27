@@ -225,6 +225,8 @@ export type Database = {
           requester_id: string
           requester_name: string
           requester_organization: string | null
+          return_due_date: string | null
+          return_reminder_sent_at: string | null
           special_groups: string[] | null
           status: string
           updated_at: string
@@ -247,6 +249,8 @@ export type Database = {
           requester_id: string
           requester_name: string
           requester_organization?: string | null
+          return_due_date?: string | null
+          return_reminder_sent_at?: string | null
           special_groups?: string[] | null
           status?: string
           updated_at?: string
@@ -269,6 +273,8 @@ export type Database = {
           requester_id?: string
           requester_name?: string
           requester_organization?: string | null
+          return_due_date?: string | null
+          return_reminder_sent_at?: string | null
           special_groups?: string[] | null
           status?: string
           updated_at?: string
