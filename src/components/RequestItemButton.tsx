@@ -14,7 +14,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { PreferredDatesPicker } from '@/components/DateTimePicker';
+import { PreferredDatesPicker, DateTimePicker } from '@/components/DateTimePicker';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
