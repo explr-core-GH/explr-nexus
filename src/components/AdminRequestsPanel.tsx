@@ -336,11 +336,22 @@ export function AdminRequestsPanel() {
                 request.numberOfStudents !== null ||
                 request.usageHours !== null ||
                 request.usageDays !== null ||
-                (request.specialGroups && request.specialGroups.length > 0)) && (
+                (request.specialGroups && request.specialGroups.length > 0)) ? (
                 <div className="p-2 bg-secondary/40 rounded text-sm space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                    <GraduationCap className="h-3.5 w-3.5" />
-                    Student Details
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                      <GraduationCap className="h-3.5 w-3.5" />
+                      Student Details
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 gap-1"
+                      onClick={() => setDemographicsRequest(request)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </Button>
                   </div>
                   {request.freeReducedLunch && (
                     <div className="flex items-center gap-1.5">
@@ -377,6 +388,16 @@ export function AdminRequestsPanel() {
                     </div>
                   )}
                 </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-1 border-dashed"
+                  onClick={() => setDemographicsRequest(request)}
+                >
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  Add Student Data
+                </Button>
               )}
 
               {request.message && (
