@@ -214,51 +214,66 @@ export type Database = {
           admin_response: string | null
           confirmed_date: string | null
           created_at: string
+          free_reduced_lunch: string | null
           id: string
           item_id: string
           item_name: string
           message: string | null
+          number_of_students: number | null
           preferred_dates: string[] | null
           requester_email: string | null
           requester_id: string
           requester_name: string
           requester_organization: string | null
+          special_groups: string[] | null
           status: string
           updated_at: string
+          usage_days: number | null
+          usage_hours: number | null
         }
         Insert: {
           admin_proposed_date?: string | null
           admin_response?: string | null
           confirmed_date?: string | null
           created_at?: string
+          free_reduced_lunch?: string | null
           id?: string
           item_id: string
           item_name: string
           message?: string | null
+          number_of_students?: number | null
           preferred_dates?: string[] | null
           requester_email?: string | null
           requester_id: string
           requester_name: string
           requester_organization?: string | null
+          special_groups?: string[] | null
           status?: string
           updated_at?: string
+          usage_days?: number | null
+          usage_hours?: number | null
         }
         Update: {
           admin_proposed_date?: string | null
           admin_response?: string | null
           confirmed_date?: string | null
           created_at?: string
+          free_reduced_lunch?: string | null
           id?: string
           item_id?: string
           item_name?: string
           message?: string | null
+          number_of_students?: number | null
           preferred_dates?: string[] | null
           requester_email?: string | null
           requester_id?: string
           requester_name?: string
           requester_organization?: string | null
+          special_groups?: string[] | null
           status?: string
           updated_at?: string
+          usage_days?: number | null
+          usage_hours?: number | null
         }
         Relationships: [
           {
