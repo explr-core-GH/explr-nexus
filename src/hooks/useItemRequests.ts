@@ -322,6 +322,7 @@ export function useItemRequests() {
     pendingCount,
     createRequest,
     updateRequest,
+    updateDemographics,
     deleteRequest,
     confirmProposedDate,
     refetch: fetchRequests,
