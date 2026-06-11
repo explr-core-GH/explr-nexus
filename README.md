@@ -60,6 +60,35 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Importing Ohio School Report Card data
+
+School demographics for grant reporting come from the Ohio Dept. of Education's annual
+building-level report-card files. They are ingested once per year into the `ohio_schools`
+table, then queried automatically when a teacher is assigned to a school + grade band.
+
+1. Download these three Excel files from
+   [reportcard.education.ohio.gov/download](https://reportcard.education.ohio.gov/download):
+   - **District & Building Overview** — enrollment by grade + total
+   - **District & Building Disaggregated Race/Ethnicity**
+   - **District & Building Disaggregated Disability / Gifted / English Learner**
+
+2. Run the importer (uses the Supabase **service-role** key, which bypasses RLS to write the
+   statewide dataset — never commit this key):
+
+   ```powershell
+   $env:SUPABASE_URL="https://<project-ref>.supabase.co"
+   $env:SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"
+   npm run import:ohio -- `
+     --overview ".\data\overview.xlsx" `
+     --race ".\data\race.xlsx" `
+     --special ".\data\special.xlsx" `
+     --year 2024-2025
+   ```
+
+   Useful flags: `--dry-run` (parse + preview, no write), `--limit 25` (write a sample),
+   `--dump-headers` (print each file's columns — handy if Ohio renames columns and a field
+   comes back empty; adjust the header patterns in `scripts/import-ohio-report-card.ts`).
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

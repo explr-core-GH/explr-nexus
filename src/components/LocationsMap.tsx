@@ -4,11 +4,14 @@ import 'leaflet/dist/leaflet.css';
 import { Location } from '@/hooks/useLocations';
 import { InventoryItem } from '@/hooks/useInventoryDB';
 import { useEducatorLocations, EducatorLocation } from '@/hooks/useEducatorLocations';
+import type { PartnerSchool } from '@/hooks/usePartnerSchools';
 
 interface LocationsMapProps {
   locations: Location[];
   items: InventoryItem[];
+  schools?: PartnerSchool[];
   onLocationClick?: (location: Location) => void;
+  onSchoolClick?: (school: PartnerSchool) => void;
 }
 
 // Fix default marker icons
@@ -38,7 +41,7 @@ const createColoredIcon = (color: string) => {
   });
 };
 
-export function LocationsMap({ locations, items, onLocationClick }: LocationsMapProps) {
+export function LocationsMap({ locations, items, schools = [], onLocationClick, onSchoolClick }: LocationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const { educatorLocations } = useEducatorLocations(items);
@@ -168,11 +171,43 @@ export function LocationsMap({ locations, items, onLocationClick }: LocationsMap
       bounds.push([educator.latitude, educator.longitude]);
     });
 
+    // Partner school markers (teal)
+    schools.forEach((school) => {
+      if (school.latitude == null || school.longitude == null) return;
+      const marker = L.marker([school.latitude, school.longitude], {
+        icon: createColoredIcon('hsl(173, 80%, 40%)'),
+      }).addTo(map);
+
+      const oh = school.ohio_schools;
+      const demoLine = oh
+        ? `
+          <div style="font-size: 11px; margin-top: 6px; border-top: 1px solid #eee; padding-top: 6px;">
+            Enrollment: <strong>${oh.total_enrollment?.toLocaleString() ?? '—'}</strong><br/>
+            Econ. disadvantaged: <strong>${oh.pct_economically_disadvantaged != null ? Math.round(oh.pct_economically_disadvantaged) + '%' : '—'}</strong>
+          </div>`
+        : `<div style="font-size: 11px; margin-top: 6px; color: #888;">No Ohio Report Card data</div>`;
+
+      const popupContent = `
+        <div style="min-width: 180px;">
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+            <span style="background: hsl(173, 80%, 40%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">SCHOOL</span>
+          </div>
+          <strong>${school.name}</strong>
+          ${school.address ? `<p style="font-size: 11px; color: #888; margin: 2px 0;">${school.address}</p>` : ''}
+          ${demoLine}
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      marker.on('click', () => onSchoolClick?.(school));
+      bounds.push([school.latitude, school.longitude]);
+    });
+
     // Fit map to bounds if we have markers
     if (bounds.length > 0) {
       map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
     }
-  }, [locations, items, onLocationClick, educatorLocations]);
+  }, [locations, items, onLocationClick, onSchoolClick, educatorLocations, schools]);
 
   return (
     <div 

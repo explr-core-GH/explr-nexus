@@ -321,6 +321,176 @@ export type Database = {
         }
         Relationships: []
       }
+      ohio_schools: {
+        Row: {
+          address: string | null
+          building_name: string
+          city: string | null
+          county: string | null
+          created_at: string
+          district_irn: string | null
+          district_name: string | null
+          enrollment_by_grade: Json
+          high_grade: string | null
+          irn: string
+          low_grade: string | null
+          pct_economically_disadvantaged: number | null
+          pct_english_learners: number | null
+          pct_gifted: number | null
+          pct_students_with_disabilities: number | null
+          race_ethnicity: Json
+          school_year: string
+          total_enrollment: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          building_name: string
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          district_irn?: string | null
+          district_name?: string | null
+          enrollment_by_grade?: Json
+          high_grade?: string | null
+          irn: string
+          low_grade?: string | null
+          pct_economically_disadvantaged?: number | null
+          pct_english_learners?: number | null
+          pct_gifted?: number | null
+          pct_students_with_disabilities?: number | null
+          race_ethnicity?: Json
+          school_year: string
+          total_enrollment?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          building_name?: string
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          district_irn?: string | null
+          district_name?: string | null
+          enrollment_by_grade?: Json
+          high_grade?: string | null
+          irn?: string
+          low_grade?: string | null
+          pct_economically_disadvantaged?: number | null
+          pct_english_learners?: number | null
+          pct_gifted?: number | null
+          pct_students_with_disabilities?: number | null
+          race_ethnicity?: Json
+          school_year?: string
+          total_enrollment?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      partner_schools: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          notes: string | null
+          ohio_irn: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          notes?: string | null
+          ohio_irn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          notes?: string | null
+          ohio_irn?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_schools_ohio_irn_fkey"
+            columns: ["ohio_irn"]
+            isOneToOne: false
+            referencedRelation: "ohio_schools"
+            referencedColumns: ["irn"]
+          },
+        ]
+      }
+      teacher_school_assignments: {
+        Row: {
+          created_at: string
+          demographics_snapshot: Json
+          grade_high: string
+          grade_low: string
+          id: string
+          notes: string | null
+          school_id: string
+          school_year: string | null
+          students_served: number | null
+          subject: string | null
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          demographics_snapshot?: Json
+          grade_high: string
+          grade_low: string
+          id?: string
+          notes?: string | null
+          school_id: string
+          school_year?: string | null
+          students_served?: number | null
+          subject?: string | null
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          demographics_snapshot?: Json
+          grade_high?: string
+          grade_low?: string
+          id?: string
+          notes?: string | null
+          school_id?: string
+          school_year?: string | null
+          students_served?: number | null
+          subject?: string | null
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_school_assignments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "partner_schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_school_assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

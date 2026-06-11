@@ -17,7 +17,8 @@ import {
   FolderOpen,
   Package,
   UserPlus,
-  MessageSquare
+  MessageSquare,
+  School
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ import { UserMenu } from '@/components/UserMenu';
 import { AddLocationDialog } from '@/components/AddLocationDialog';
 import { LocationsMap } from '@/components/LocationsMap';
 import { ImpactDashboard } from '@/components/ImpactDashboard';
+import { SchoolsPanel } from '@/components/SchoolsPanel';
 import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { ResourceManagement } from '@/components/ResourceManagement';
@@ -207,7 +209,7 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
+          <TabsList className="grid w-full grid-cols-7 max-w-4xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
@@ -224,6 +226,10 @@ const Admin = () => {
             <TabsTrigger value="locations" className="gap-2">
               <MapPin className="h-4 w-4" />
               <span className="hidden sm:inline">Locations</span>
+            </TabsTrigger>
+            <TabsTrigger value="schools" className="gap-2">
+              <School className="h-4 w-4" />
+              <span className="hidden sm:inline">Schools</span>
             </TabsTrigger>
             <TabsTrigger value="bundles" className="gap-2">
               <Package className="h-4 w-4" />
@@ -660,6 +666,11 @@ const Admin = () => {
 
             {/* Impact Dashboard */}
             <ImpactDashboard />
+          </TabsContent>
+
+          {/* Schools Tab */}
+          <TabsContent value="schools" className="space-y-6 mt-6">
+            <SchoolsPanel />
           </TabsContent>
 
           {/* Bundles Tab */}
