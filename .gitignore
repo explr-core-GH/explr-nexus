@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Ohio Report Card import: raw data files + service-role key (never commit)
+/data
+.env.import
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
