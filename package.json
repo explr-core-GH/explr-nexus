@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "import:ohio": "tsx scripts/import-ohio-report-card.ts"
+    "import:ohio": "tsx scripts/import-ohio-report-card.ts",
+    "import:ohio:json": "tsx scripts/import-ohio-buildings.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
