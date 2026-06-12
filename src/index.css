@@ -221,3 +221,32 @@
     50% { opacity: 0.7; }
   }
 }
+
+/* Print isolation: only the grant report prints (GrantReportDialog -> Save as PDF). */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #grant-report-print,
+  #grant-report-print * {
+    visibility: visible !important;
+  }
+  #grant-report-print {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    width: 700px !important;
+    margin: 0 !important;
+  }
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  @page {
+    size: auto;
+    margin: 12mm;
+  }
+}

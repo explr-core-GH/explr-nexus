@@ -29,49 +29,14 @@ import {
 } from '@/components/ui/table';
 import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
 import type { TeacherAssignment, NewAssignment } from '@/hooks/useTeacherAssignments';
-import type { DemographicCounts } from '@/lib/schoolDemographics';
+import { countsFor, effectiveServed, RACE_LABELS, type Mode } from '@/lib/grantAggregate';
 import { GRADE_LABELS } from '@/lib/grades';
 import { schoolYearOptions } from '@/lib/schoolYears';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 import { ProgramDemographicsDialog } from '@/components/ProgramDemographicsDialog';
 import { ChangeYearDialog } from '@/components/ChangeYearDialog';
+import { GrantReportDialog } from '@/components/GrantReportDialog';
 import { Pencil } from 'lucide-react';
-
-const RACE_LABELS: Record<string, string> = {
-  white: 'White',
-  black: 'Black',
-  hispanic: 'Hispanic/Latino',
-  asian: 'Asian',
-  american_indian: 'American Indian',
-  pacific_islander: 'Pacific Islander',
-  multiracial: 'Multiracial',
-};
-
-type Mode = 'potential' | 'actual';
-
-const ZERO: DemographicCounts = {
-  base: 0,
-  economically_disadvantaged: null,
-  students_with_disabilities: null,
-  english_learners: null,
-  gifted: null,
-  race_ethnicity: {},
-};
-
-function countsFor(a: TeacherAssignment, mode: Mode): DemographicCounts {
-  const snap = a.demographics_snapshot;
-  if (!snap) return ZERO;
-  if (mode === 'actual') {
-    // Actual served counts only entered headcounts; blank assignments are not counted.
-    return snap.actual ?? { ...ZERO, base: a.students_served ?? 0 };
-  }
-  return snap.potential ?? ZERO;
-}
-
-/** The served headcount for an assignment (only what was actually entered). */
-function effectiveServed(a: TeacherAssignment): number | null {
-  return a.students_served ?? null;
-}
 
 const gradeLabel = (g: string) => GRADE_LABELS[g as keyof typeof GRADE_LABELS] ?? g;
 
@@ -85,6 +50,7 @@ interface Props {
 }
 
 export function GrantImpactDashboard({
+  schools,
   assignments,
   onDeleteAssignment,
   onUpdateAssignment,
@@ -312,6 +278,16 @@ export function GrantImpactDashboard({
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
+          <GrantReportDialog
+            assignments={filteredAssignments}
+            schools={schools}
+            yearLabel={yearFilter === 'all' ? 'All years' : yearFilter}
+            typeLabel={
+              typeFilter === 'all'
+                ? 'All types'
+                : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)
+            }
+          />
         </div>
       </div>
 
