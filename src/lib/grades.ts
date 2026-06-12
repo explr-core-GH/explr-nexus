@@ -24,6 +24,20 @@ export const GRADE_LABELS: Record<GradeToken, string> = {
   '12': '12th',
 };
 
+/** Normalize a free-form grade input (e.g. "6", "06", "K", "Kindergarten", "Pre-K") to a token. */
+export function normalizeGradeToken(input: string): GradeToken | null {
+  const t = input.trim().toUpperCase();
+  if (!t) return null;
+  if (/^(P|PK|PRE-?K|PRESCHOOL)$/.test(t)) return 'PK';
+  if (/^(K|KG|KINDER(GARTEN)?)$/.test(t)) return 'KG';
+  const num = t.replace(/(ST|ND|RD|TH|\s*GRADE)\b/g, '').trim();
+  if (/^\d{1,2}$/.test(num)) {
+    const n = parseInt(num, 10);
+    if (n >= 1 && n <= 12) return String(n).padStart(2, '0') as GradeToken;
+  }
+  return ORDERED_GRADES.includes(t as GradeToken) ? (t as GradeToken) : null;
+}
+
 /** Inclusive list of grade tokens between `low` and `high` (e.g. 06..08). */
 export function gradesInBand(low: string, high: string): GradeToken[] {
   const lo = ORDERED_GRADES.indexOf(low as GradeToken);

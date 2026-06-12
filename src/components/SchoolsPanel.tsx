@@ -26,6 +26,7 @@ import { LocationsMap } from '@/components/LocationsMap';
 import { AddSchoolDialog } from '@/components/AddSchoolDialog';
 import { AddTeacherDialog } from '@/components/AddTeacherDialog';
 import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
+import { BulkAssignmentsPanel } from '@/components/BulkAssignmentsPanel';
 import { GrantImpactDashboard } from '@/components/GrantImpactDashboard';
 import { usePartnerSchools } from '@/hooks/usePartnerSchools';
 import { useTeacherAssignments } from '@/hooks/useTeacherAssignments';
@@ -258,6 +259,15 @@ export function SchoolsPanel() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Bulk import & edit */}
+      <BulkAssignmentsPanel
+        teacherOptions={selectableTeachers}
+        onAddTeacher={addTeacher}
+        onResolveTeacherId={resolveTeacherId}
+        onResolveSchool={findOrCreateByOhioIrn}
+        onAssign={addAssignment}
+      />
 
       {/* Teachers + Organizations */}
       <div className="grid lg:grid-cols-2 gap-4">
