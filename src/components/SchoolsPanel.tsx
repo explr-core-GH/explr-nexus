@@ -25,6 +25,7 @@ import {
 import { LocationsMap } from '@/components/LocationsMap';
 import { AddSchoolDialog } from '@/components/AddSchoolDialog';
 import { AddTeacherDialog } from '@/components/AddTeacherDialog';
+import { AddOrganizationDialog } from '@/components/AddOrganizationDialog';
 import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
 import { BulkAssignmentsPanel } from '@/components/BulkAssignmentsPanel';
 import { GrantImpactDashboard } from '@/components/GrantImpactDashboard';
@@ -38,7 +39,7 @@ export function SchoolsPanel() {
   const { schools, addSchool, findOrCreateByOhioIrn, deleteSchool } = usePartnerSchools();
   const { assignments, addAssignment, updateAssignment, reassignYear, deleteAssignment } = useTeacherAssignments();
   const { teachers, addTeacher, findOrCreateForProfile, deleteTeacher } = useTeachers();
-  const { organizations, deleteOrganization } = useOrganizations();
+  const { organizations, addOrganization, deleteOrganization } = useOrganizations();
   const { users } = useSelectableUsers();
   const [query, setQuery] = useState('');
 
@@ -112,6 +113,7 @@ export function SchoolsPanel() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <AddTeacherDialog onAdd={addTeacher} />
+          <AddOrganizationDialog onAdd={addOrganization} />
           <AssignTeacherDialog
             teacherOptions={selectableTeachers}
             assignments={assignments}

@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
+import { findOrCreatePartnerSchool } from '@/lib/partnerSchools';
+import type { OhioSchool } from '@/lib/csvAssignments';
 
 export type OrganizationWithSchools = Tables<'organizations'> & {
   organization_schools: {
@@ -38,6 +40,42 @@ export function useOrganizations() {
     }
   }, [user]);
 
+  const addOrganization = async (input: {
+    name: string;
+    org_type: string;
+    schools?: OhioSchool[];
+  }) => {
+    try {
+      const { data: org, error } = await supabase
+        .from('organizations')
+        .insert({ name: input.name, org_type: input.org_type })
+        .select('id')
+        .single();
+      if (error || !org) throw error;
+
+      for (const ohio of input.schools ?? []) {
+        const school = await findOrCreatePartnerSchool(ohio);
+        if (!school) continue;
+        const { error: linkErr } = await supabase
+          .from('organization_schools')
+          .insert({ organization_id: org.id, school_id: school.id });
+        if (linkErr) console.error('Error linking org school:', linkErr);
+      }
+
+      await fetchOrganizations();
+      toast({ title: 'Organization Added', description: `${input.name} has been added` });
+      return true;
+    } catch (error: any) {
+      console.error('Error adding organization:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add organization',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const deleteOrganization = async (id: string) => {
     if (!isAdmin) {
       toast({ title: 'Permission Denied', description: 'Only admins can delete organizations', variant: 'destructive' });
@@ -60,5 +98,5 @@ export function useOrganizations() {
     }
   };
 
-  return { organizations, isLoading, deleteOrganization, refetch: fetchOrganizations };
+  return { organizations, isLoading, addOrganization, deleteOrganization, refetch: fetchOrganizations };
 }
