@@ -6,6 +6,24 @@ export function currentAcademicYear(now: Date = new Date()): string {
   return `${start}-${start + 1}`;
 }
 
+/** Normalize a year input to an academic-year string: "2025" -> "2025-2026", "2025-26" -> "2025-2026". */
+export function normalizeSchoolYear(input: string): string {
+  const t = (input ?? '').trim();
+  if (!t) return t;
+  if (/^\d{4}-\d{4}$/.test(t)) return t; // already full
+  const single = t.match(/^(\d{4})$/);
+  if (single) {
+    const y = parseInt(single[1], 10);
+    return `${y}-${y + 1}`;
+  }
+  const short = t.match(/^(\d{4})\s*[-/]\s*(\d{2})$/); // 2025-26 or 2025/26
+  if (short) {
+    const y = parseInt(short[1], 10);
+    return `${y}-${Math.floor(y / 100) * 100 + parseInt(short[2], 10)}`;
+  }
+  return t;
+}
+
 /** Recent academic years, most-recent first (default: 2 back through 1 forward). */
 export function recentSchoolYears(now: Date = new Date(), back = 2, forward = 1): string[] {
   const y = now.getFullYear();

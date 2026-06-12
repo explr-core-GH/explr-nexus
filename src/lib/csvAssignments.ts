@@ -1,6 +1,6 @@
 import type { Tables } from '@/integrations/supabase/types';
 import { normalizeGradeToken } from '@/lib/grades';
-import { currentAcademicYear } from '@/lib/schoolYears';
+import { currentAcademicYear, normalizeSchoolYear } from '@/lib/schoolYears';
 import { VISIBILITY_TAGS } from '@/constants/tags';
 
 export type OhioSchool = Tables<'ohio_schools'>;
@@ -105,7 +105,7 @@ export function parseTeacherCSV(content: string): ParseResult {
       gradeLow,
       gradeHigh,
       studentsServed: get('students_served'),
-      schoolYear: get('school_year') || currentAcademicYear(),
+      schoolYear: get('school_year') ? normalizeSchoolYear(get('school_year')) : currentAcademicYear(),
       subjectTags,
     });
   }

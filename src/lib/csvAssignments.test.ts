@@ -1,6 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeGradeToken } from './grades';
+import { normalizeSchoolYear } from './schoolYears';
 import { parseTeacherCSV } from './csvAssignments';
+
+describe('normalizeSchoolYear', () => {
+  it('expands a single year to an academic year', () => {
+    expect(normalizeSchoolYear('2025')).toBe('2025-2026');
+    expect(normalizeSchoolYear('2024')).toBe('2024-2025');
+  });
+  it('expands short form', () => {
+    expect(normalizeSchoolYear('2025-26')).toBe('2025-2026');
+    expect(normalizeSchoolYear('2025/26')).toBe('2025-2026');
+  });
+  it('leaves a full academic year unchanged', () => {
+    expect(normalizeSchoolYear('2025-2026')).toBe('2025-2026');
+  });
+});
 
 describe('normalizeGradeToken', () => {
   it('normalizes numeric grades', () => {
@@ -66,5 +81,10 @@ describe('parseTeacherCSV', () => {
   it('defaults school year when blank', () => {
     const res = parseTeacherCSV(`${header}\nAmy,,School,6,8,,,`);
     expect(res.rows[0].schoolYear).toMatch(/^\d{4}-\d{4}$/);
+  });
+
+  it('normalizes a bare year to an academic year', () => {
+    const res = parseTeacherCSV(`${header}\nAmy,,School,6,8,,2025,`);
+    expect(res.rows[0].schoolYear).toBe('2025-2026');
   });
 });
