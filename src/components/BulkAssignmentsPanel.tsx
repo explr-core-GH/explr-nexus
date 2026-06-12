@@ -46,6 +46,7 @@ export function BulkAssignmentsPanel({
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [saving, setSaving] = useState(false);
   const idSeq = useRef(0);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const yearOptions = useMemo(
     () => schoolYearOptions(rows.map((r) => r.schoolYear)),
@@ -77,6 +78,7 @@ export function BulkAssignmentsPanel({
 
   const handleImport = async (imported: DraftRow[]) => {
     setRows((prev) => [...prev, ...imported]);
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     // Auto-match schools from the CSV text against the Ohio dataset.
     for (const r of imported) {
       if (!r.schoolText.trim() || r.selectedSchool) continue;
@@ -149,7 +151,7 @@ export function BulkAssignmentsPanel({
   };
 
   return (
-    <div className="bg-card border rounded-xl p-4 space-y-4">
+    <div ref={panelRef} className="bg-card border rounded-xl p-4 space-y-4 scroll-mt-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Table2 className="h-5 w-5 text-muted-foreground" />
@@ -172,6 +174,13 @@ export function BulkAssignmentsPanel({
           </Button>
         </div>
       </div>
+
+      {rows.length > 0 && (
+        <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+          Review and edit below — <strong>nothing is uploaded until you click Save</strong>. Rows with
+          an unmatched school (red) or invalid grades are skipped until fixed.
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">

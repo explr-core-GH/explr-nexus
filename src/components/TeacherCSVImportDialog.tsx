@@ -166,6 +166,47 @@ export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps
                   </AlertDescription>
                 </Alert>
               )}
+
+              {/* Preview of what will be added */}
+              {result.rows.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-muted px-3 py-2 text-sm font-medium">Preview</div>
+                  <ScrollArea className="max-h-56">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs text-muted-foreground">
+                        <tr className="border-b">
+                          <th className="text-left font-normal px-3 py-1.5">Teacher</th>
+                          <th className="text-left font-normal px-3 py-1.5">School</th>
+                          <th className="text-left font-normal px-3 py-1.5">Grades</th>
+                          <th className="text-left font-normal px-3 py-1.5">Year</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.rows.map((r) => (
+                          <tr key={r.id} className="border-b last:border-0">
+                            <td className="px-3 py-1.5 font-medium">{r.teacherName}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground truncate max-w-[160px]">
+                              {r.schoolText || <span className="text-destructive">— missing —</span>}
+                            </td>
+                            <td className="px-3 py-1.5 text-muted-foreground">
+                              {r.gradeLow && r.gradeHigh ? `${r.gradeLow}–${r.gradeHigh}` : '—'}
+                            </td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{r.schoolYear}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </div>
+              )}
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  Nothing is uploaded yet. These rows open in the editable grid where you can match
+                  schools, fix details, and then click <strong>Save All</strong> to upload for real.
+                </AlertDescription>
+              </Alert>
             </div>
           )}
 
@@ -186,7 +227,7 @@ export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps
             Cancel
           </Button>
           <Button onClick={handleImport} disabled={!result || result.rows.length === 0}>
-            Add {result?.rows.length || 0} to grid
+            Review {result?.rows.length || 0} in grid →
           </Button>
         </DialogFooter>
       </DialogContent>
