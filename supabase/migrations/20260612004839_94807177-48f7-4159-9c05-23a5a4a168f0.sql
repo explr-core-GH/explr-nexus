@@ -1,0 +1,1 @@
+GRANT INSERT, UPDATE ON public.ohio_schools TO sandbox_exec;
