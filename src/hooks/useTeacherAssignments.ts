@@ -92,9 +92,12 @@ export function useTeacherAssignments() {
       if (error) throw error;
 
       setAssignments((prev) => [data as unknown as TeacherAssignment, ...prev]);
+      const isProgram = input.teacher_id == null;
       toast({
-        title: 'Teacher Assigned',
-        description: 'Assignment created with demographic snapshot',
+        title: isProgram ? 'Program saved' : 'Teacher Assigned',
+        description: isProgram
+          ? `${input.program_name || 'Program'} recorded with demographics`
+          : 'Assignment created with demographic snapshot',
       });
       return data as unknown as TeacherAssignment;
     } catch (error: any) {
