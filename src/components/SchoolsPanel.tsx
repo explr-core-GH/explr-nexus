@@ -29,15 +29,52 @@ import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
 import { GrantImpactDashboard } from '@/components/GrantImpactDashboard';
 import { usePartnerSchools } from '@/hooks/usePartnerSchools';
 import { useTeacherAssignments } from '@/hooks/useTeacherAssignments';
-import { useTeachers } from '@/hooks/useTeachers';
+import { useTeachers, type SelectableTeacher } from '@/hooks/useTeachers';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { useSelectableUsers } from '@/hooks/useSelectableUsers';
 
 export function SchoolsPanel() {
   const { schools, addSchool, findOrCreateByOhioIrn, deleteSchool } = usePartnerSchools();
   const { assignments, addAssignment, deleteAssignment } = useTeacherAssignments();
-  const { teachers, addTeacher, deleteTeacher } = useTeachers();
+  const { teachers, addTeacher, findOrCreateForProfile, deleteTeacher } = useTeachers();
   const { organizations, deleteOrganization } = useOrganizations();
+  const { users } = useSelectableUsers();
   const [query, setQuery] = useState('');
+
+  // Merge manual teachers with registered users (auto-surfaced as assignable teachers).
+  const selectableTeachers = useMemo<SelectableTeacher[]>(() => {
+    const linkedProfiles = new Set(teachers.filter((t) => t.profile_id).map((t) => t.profile_id));
+    const list: SelectableTeacher[] = teachers.map((t) => ({
+      key: t.id,
+      full_name: t.full_name,
+      email: t.email,
+      teacherId: t.id,
+      profileId: t.profile_id,
+      isRegistered: !!t.profile_id,
+    }));
+    for (const u of users) {
+      if (!linkedProfiles.has(u.id)) {
+        list.push({
+          key: `profile:${u.id}`,
+          full_name: u.full_name,
+          email: u.email,
+          teacherId: null,
+          profileId: u.id,
+          isRegistered: true,
+        });
+      }
+    }
+    return list.sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [teachers, users]);
+
+  const resolveTeacherId = async (sel: SelectableTeacher): Promise<string | null> => {
+    if (sel.teacherId) return sel.teacherId;
+    if (sel.profileId) {
+      const t = await findOrCreateForProfile(sel.profileId, sel.full_name, sel.email);
+      return t?.id ?? null;
+    }
+    return null;
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -74,8 +111,9 @@ export function SchoolsPanel() {
         <div className="flex gap-2 flex-wrap">
           <AddTeacherDialog onAdd={addTeacher} />
           <AssignTeacherDialog
-            teachers={teachers}
+            teacherOptions={selectableTeachers}
             onAddTeacher={addTeacher}
+            onResolveTeacherId={resolveTeacherId}
             onResolveSchool={findOrCreateByOhioIrn}
             onAssign={addAssignment}
           />
@@ -225,28 +263,31 @@ export function SchoolsPanel() {
           <div className="flex items-center gap-2">
             <User className="h-5 w-5 text-muted-foreground" />
             <h3 className="font-semibold">Teachers</h3>
-            <Badge variant="secondary" className="ml-auto">{teachers.length}</Badge>
+            <Badge variant="secondary" className="ml-auto">{selectableTeachers.length}</Badge>
           </div>
-          {teachers.length === 0 ? (
+          {selectableTeachers.length === 0 ? (
             <p className="text-sm text-muted-foreground">No teachers yet.</p>
           ) : (
             <div className="divide-y max-h-72 overflow-y-auto">
-              {teachers.map((t) => (
-                <div key={t.id} className="flex items-center justify-between gap-2 py-2">
+              {selectableTeachers.map((t) => (
+                <div key={t.key} className="flex items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
                     <p className="font-medium truncate">{t.full_name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {t.email || (t.profile_id ? 'Registered user' : 'Manual entry')}
+                      {t.email ? `${t.email} · ` : ''}
+                      {t.isRegistered ? 'Registered user' : 'Manual entry'}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive shrink-0"
-                    onClick={() => deleteTeacher(t.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {!t.isRegistered && t.teacherId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive shrink-0"
+                      onClick={() => deleteTeacher(t.teacherId!)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

@@ -6,6 +6,17 @@ import type { Tables } from '@/integrations/supabase/types';
 
 export type Teacher = Tables<'teachers'>;
 
+/** A teacher option for selectors: either a real teachers row or a registered user
+ *  (profile) not yet linked to one. `teacherId` is null until materialized. */
+export interface SelectableTeacher {
+  key: string;
+  full_name: string;
+  email: string | null;
+  teacherId: string | null;
+  profileId: string | null;
+  isRegistered: boolean;
+}
+
 export function useTeachers() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +72,17 @@ export function useTeachers() {
     }
   };
 
+  /** Find (or lazily create) the teachers row for a registered user's profile. */
+  const findOrCreateForProfile = async (
+    profileId: string,
+    fullName: string,
+    email: string | null
+  ): Promise<Teacher | null> => {
+    const existing = teachers.find((t) => t.profile_id === profileId);
+    if (existing) return existing;
+    return addTeacher({ full_name: fullName, email, profile_id: profileId });
+  };
+
   const deleteTeacher = async (id: string) => {
     if (!isAdmin) {
       toast({ title: 'Permission Denied', description: 'Only admins can delete teachers', variant: 'destructive' });
@@ -83,5 +105,5 @@ export function useTeachers() {
     }
   };
 
-  return { teachers, isLoading, addTeacher, deleteTeacher, refetch: fetchTeachers };
+  return { teachers, isLoading, addTeacher, findOrCreateForProfile, deleteTeacher, refetch: fetchTeachers };
 }

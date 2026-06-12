@@ -21,14 +21,15 @@ import {
 } from '@/components/ui/select';
 import { useOhioSchools } from '@/hooks/useOhioSchools';
 import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
-import type { Teacher } from '@/hooks/useTeachers';
+import type { Teacher, SelectableTeacher } from '@/hooks/useTeachers';
 import type { NewAssignment } from '@/hooks/useTeacherAssignments';
 import { ORDERED_GRADES, GRADE_LABELS, gradesInBand } from '@/lib/grades';
 import { buildSnapshot } from '@/lib/schoolDemographics';
 
 interface AssignTeacherDialogProps {
-  teachers: Teacher[];
+  teacherOptions: SelectableTeacher[];
   onAddTeacher: (input: { full_name: string; email?: string | null }) => Promise<Teacher | null>;
+  onResolveTeacherId: (sel: SelectableTeacher) => Promise<string | null>;
   onResolveSchool: (ohio: OhioSchool) => Promise<PartnerSchool | null>;
   onAssign: (input: NewAssignment) => Promise<unknown>;
 }
@@ -36,14 +37,15 @@ interface AssignTeacherDialogProps {
 const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
 
 export function AssignTeacherDialog({
-  teachers,
+  teacherOptions,
   onAddTeacher,
+  onResolveTeacherId,
   onResolveSchool,
   onAssign,
 }: AssignTeacherDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const [teacherId, setTeacherId] = useState('');
+  const [teacherKey, setTeacherKey] = useState('');
   const [addingTeacher, setAddingTeacher] = useState(false);
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newTeacherEmail, setNewTeacherEmail] = useState('');
@@ -67,7 +69,7 @@ export function AssignTeacherDialog({
   }, [selectedSchool, gradeLow, gradeHigh, servedNum, bandValid]);
 
   const reset = () => {
-    setTeacherId('');
+    setTeacherKey('');
     setAddingTeacher(false);
     setNewTeacherName('');
     setNewTeacherEmail('');
@@ -94,19 +96,29 @@ export function AssignTeacherDialog({
     if (!newTeacherName.trim()) return;
     const t = await onAddTeacher({ full_name: newTeacherName.trim(), email: newTeacherEmail.trim() || null });
     if (t) {
-      setTeacherId(t.id);
+      setTeacherKey(t.id);
       setAddingTeacher(false);
       setNewTeacherName('');
       setNewTeacherEmail('');
     }
   };
 
-  const canSubmit = teacherId && selectedSchool && bandValid;
+  const canSubmit = teacherKey && selectedSchool && bandValid;
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedSchool) return;
     setSaving(true);
     try {
+      const sel = teacherOptions.find((o) => o.key === teacherKey);
+      if (!sel) {
+        setSaving(false);
+        return;
+      }
+      const teacherId = await onResolveTeacherId(sel);
+      if (!teacherId) {
+        setSaving(false);
+        return;
+      }
       const school = await onResolveSchool(selectedSchool);
       if (!school) {
         setSaving(false);
@@ -181,20 +193,21 @@ export function AssignTeacherDialog({
                 </Button>
               </div>
             ) : (
-              <Select value={teacherId} onValueChange={setTeacherId}>
+              <Select value={teacherKey} onValueChange={setTeacherKey}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select a teacher" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {teachers.length === 0 ? (
+                  {teacherOptions.length === 0 ? (
                     <div className="py-2 px-3 text-sm text-muted-foreground">
                       No teachers yet — add one
                     </div>
                   ) : (
-                    teachers.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
+                    teacherOptions.map((t) => (
+                      <SelectItem key={t.key} value={t.key}>
                         {t.full_name}
                         {t.email ? <span className="text-muted-foreground"> · {t.email}</span> : ''}
+                        {t.isRegistered && <span className="text-muted-foreground"> · registered</span>}
                       </SelectItem>
                     ))
                   )}
