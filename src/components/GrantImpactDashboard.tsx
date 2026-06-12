@@ -93,14 +93,21 @@ export function GrantImpactDashboard({
 }: Props) {
   const [mode, setMode] = useState<Mode>('potential');
   const [yearFilter, setYearFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   const years = useMemo(
     () => schoolYearOptions(assignments.map((a) => a.school_year)),
     [assignments]
   );
   const filteredAssignments = useMemo(
-    () => (yearFilter === 'all' ? assignments : assignments.filter((a) => a.school_year === yearFilter)),
-    [assignments, yearFilter]
+    () =>
+      assignments.filter((a) => {
+        if (yearFilter !== 'all' && a.school_year !== yearFilter) return false;
+        if (typeFilter === 'all') return true;
+        if (typeFilter === 'teachers') return !a.program_type;
+        return (a.program_type ?? '').toLowerCase() === typeFilter;
+      }),
+    [assignments, yearFilter, typeFilter]
   );
 
   const data = useMemo(() => {
@@ -158,6 +165,8 @@ export function GrantImpactDashboard({
     const raceKeys = Object.keys(RACE_LABELS);
     const header = [
       'Teacher',
+      'Program',
+      'Type',
       'School',
       'IRN',
       'Grades',
@@ -180,6 +189,8 @@ export function GrantImpactDashboard({
       const c = countsFor(a, mode);
       return [
         a.teachers?.full_name ?? '',
+        a.program_name ?? '',
+        a.program_type ?? '',
         a.partner_schools?.name ?? '',
         a.partner_schools?.ohio_irn ?? '',
         `${gradeLabel(a.grade_low)}-${gradeLabel(a.grade_high)}`,
@@ -245,6 +256,21 @@ export function GrantImpactDashboard({
                   {y}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          {/* Type filter */}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="bg-background w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-background border z-50">
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="teachers">Teachers</SelectItem>
+              <SelectItem value="camp">Camp</SelectItem>
+              <SelectItem value="internship">Internship</SelectItem>
+              <SelectItem value="pilot">Pilot</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
 
@@ -357,7 +383,22 @@ export function GrantImpactDashboard({
             ) : (
               filteredAssignments.map((a) => (
               <TableRow key={a.id}>
-                <TableCell className="font-medium">{a.teachers?.full_name ?? '—'}</TableCell>
+                <TableCell className="font-medium">
+                  {a.teachers?.full_name ?? (
+                    a.program_name ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate">{a.program_name}</span>
+                        {a.program_type && (
+                          <Badge variant="outline" className="text-[10px] capitalize shrink-0">
+                            {a.program_type}
+                          </Badge>
+                        )}
+                      </span>
+                    ) : (
+                      '—'
+                    )
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {a.partner_schools?.name ?? '—'}
                   {a.subject ? <span className="text-xs"> · {a.subject}</span> : ''}

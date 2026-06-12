@@ -11,7 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { PROGRAM_TYPES } from '@/constants/programs';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 import { BulkSchoolCell } from '@/components/BulkSchoolCell';
 import { TeacherCSVImportDialog } from '@/components/TeacherCSVImportDialog';
@@ -32,8 +34,12 @@ interface BulkAssignmentsPanelProps {
   onAssign: (input: NewAssignment) => Promise<unknown>;
 }
 
-const rowValid = (r: DraftRow) =>
-  r.teacherName.trim() !== '' && r.selectedSchool != null && gradesInBand(r.gradeLow, r.gradeHigh).length > 0;
+type Mode = 'teacher' | 'program';
+
+const rowValid = (r: DraftRow, mode: Mode) =>
+  (mode === 'program' || r.teacherName.trim() !== '') &&
+  r.selectedSchool != null &&
+  gradesInBand(r.gradeLow, r.gradeHigh).length > 0;
 
 export function BulkAssignmentsPanel({
   teacherOptions,
@@ -45,6 +51,9 @@ export function BulkAssignmentsPanel({
   const { toast } = useToast();
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<Mode>('teacher');
+  const [programType, setProgramType] = useState<string>('Camp');
+  const [programName, setProgramName] = useState('');
   const idSeq = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +61,8 @@ export function BulkAssignmentsPanel({
     () => schoolYearOptions(rows.map((r) => r.schoolYear)),
     [rows]
   );
-  const readyCount = rows.filter(rowValid).length;
+  const readyCount = rows.filter((r) => rowValid(r, mode)).length;
+  const programReady = mode === 'teacher' || programName.trim() !== '';
 
   const update = (id: string, patch: Partial<DraftRow>) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -99,7 +109,11 @@ export function BulkAssignmentsPanel({
   };
 
   const saveAll = async () => {
-    const valid = rows.filter(rowValid);
+    if (mode === 'program' && !programName.trim()) {
+      toast({ title: 'Name the program', description: 'Enter a program name first', variant: 'destructive' });
+      return;
+    }
+    const valid = rows.filter((r) => rowValid(r, mode));
     if (valid.length === 0) {
       toast({ title: 'Nothing to save', description: 'Fix the highlighted rows first', variant: 'destructive' });
       return;
@@ -110,8 +124,15 @@ export function BulkAssignmentsPanel({
     const savedIds: string[] = [];
     try {
       for (const row of valid) {
-        const teacherId = await resolveRowTeacher(row);
-        if (!teacherId || !row.selectedSchool) {
+        let teacherId: string | null = null;
+        if (mode === 'teacher') {
+          teacherId = await resolveRowTeacher(row);
+          if (!teacherId) {
+            failed++;
+            continue;
+          }
+        }
+        if (!row.selectedSchool) {
           failed++;
           continue;
         }
@@ -129,6 +150,8 @@ export function BulkAssignmentsPanel({
           subject: row.subjectTags.length ? row.subjectTags.join(', ') : null,
           students_served: served,
           school_year: row.schoolYear,
+          program_name: mode === 'program' ? programName.trim() : null,
+          program_type: mode === 'program' ? programType.toLowerCase() : null,
           demographics_snapshot: buildSnapshot(row.selectedSchool, row.gradeLow, row.gradeHigh, served),
         });
         if (res) {
@@ -150,6 +173,12 @@ export function BulkAssignmentsPanel({
     });
   };
 
+  const gridCols =
+    mode === 'teacher'
+      ? 'grid-cols-[140px_150px_200px_84px_84px_80px_120px_90px_36px]'
+      : 'grid-cols-[200px_84px_84px_80px_120px_90px_36px]';
+  const gridMin = mode === 'teacher' ? 'min-w-[920px]' : 'min-w-[640px]';
+
   return (
     <div ref={panelRef} className="bg-card border rounded-xl p-4 space-y-4 scroll-mt-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -163,16 +192,73 @@ export function BulkAssignmentsPanel({
           )}
         </div>
         <div className="flex gap-2">
-          <TeacherCSVImportDialog onImport={handleImport} />
+          <TeacherCSVImportDialog onImport={handleImport} mode={mode} />
           <Button variant="outline" className="gap-2" onClick={addRow}>
             <Plus className="h-4 w-4" />
             Add row
           </Button>
-          <Button className="gap-2" onClick={saveAll} disabled={saving || readyCount === 0}>
+          <Button
+            className="gap-2"
+            onClick={saveAll}
+            disabled={saving || readyCount === 0 || !programReady}
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save {readyCount > 0 ? readyCount : ''}
           </Button>
         </div>
+      </div>
+
+      {/* Mode toggle + program details */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="inline-flex rounded-lg border p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode('teacher')}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              mode === 'teacher' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            Teachers
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('program')}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              mode === 'program' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            Program (camp / internship / pilot)
+          </button>
+        </div>
+
+        {mode === 'program' && (
+          <>
+            <div className="space-y-1">
+              <Label className="text-xs">Type</Label>
+              <Select value={programType} onValueChange={setProgramType}>
+                <SelectTrigger className="h-9 w-[140px] bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {PROGRAM_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Program name</Label>
+              <Input
+                value={programName}
+                placeholder="e.g. STEM Summer Camp 2025"
+                onChange={(e) => setProgramName(e.target.value)}
+                className="h-9 w-[240px]"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {rows.length > 0 && (
@@ -189,41 +275,49 @@ export function BulkAssignmentsPanel({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <div className="min-w-[920px] space-y-2">
+          <div className={`${gridMin} space-y-2`}>
             {/* header */}
-            <div className="grid grid-cols-[140px_150px_200px_84px_84px_80px_120px_90px_36px] gap-2 text-xs text-muted-foreground px-1">
-              <span>Teacher</span>
-              <span>Email</span>
+            <div className={`grid ${gridCols} gap-2 text-xs text-muted-foreground px-1`}>
+              {mode === 'teacher' && (
+                <>
+                  <span>Teacher</span>
+                  <span>Email</span>
+                </>
+              )}
               <span>School</span>
               <span>From</span>
               <span>To</span>
               <span>Students</span>
               <span>Year</span>
-              <span>Program</span>
+              <span>Tags</span>
               <span />
             </div>
 
             {rows.map((r) => {
-              const valid = rowValid(r);
+              const valid = rowValid(r, mode);
               return (
                 <div
                   key={r.id}
-                  className={`grid grid-cols-[140px_150px_200px_84px_84px_80px_120px_90px_36px] gap-2 items-center rounded-lg p-1 ${
+                  className={`grid ${gridCols} gap-2 items-center rounded-lg p-1 ${
                     valid ? '' : 'bg-destructive/5'
                   }`}
                 >
-                  <Input
-                    value={r.teacherName}
-                    placeholder="Name"
-                    onChange={(e) => update(r.id, { teacherName: e.target.value })}
-                    className="h-9"
-                  />
-                  <Input
-                    value={r.teacherEmail}
-                    placeholder="email"
-                    onChange={(e) => update(r.id, { teacherEmail: e.target.value })}
-                    className="h-9"
-                  />
+                  {mode === 'teacher' && (
+                    <>
+                      <Input
+                        value={r.teacherName}
+                        placeholder="Name"
+                        onChange={(e) => update(r.id, { teacherName: e.target.value })}
+                        className="h-9"
+                      />
+                      <Input
+                        value={r.teacherEmail}
+                        placeholder="email"
+                        onChange={(e) => update(r.id, { teacherEmail: e.target.value })}
+                        className="h-9"
+                      />
+                    </>
+                  )}
                   <BulkSchoolCell
                     schoolText={r.schoolText}
                     selectedSchool={r.selectedSchool}

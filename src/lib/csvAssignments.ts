@@ -59,15 +59,22 @@ const matchTag = (raw: string): string | null => {
 let rowSeq = 0;
 const nextId = () => `draft-${rowSeq++}-${Math.floor(Math.random() * 1e6)}`;
 
-/** Parse a teacher-assignment CSV into draft rows. Schools are resolved separately. */
-export function parseTeacherCSV(content: string): ParseResult {
+/**
+ * Parse a teacher-assignment CSV into draft rows. Schools are resolved separately.
+ * In program mode (`requireTeacher: false`) the teacher column is optional.
+ */
+export function parseTeacherCSV(
+  content: string,
+  opts: { requireTeacher?: boolean } = {}
+): ParseResult {
+  const requireTeacher = opts.requireTeacher ?? true;
   const lines = content.split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith('#'));
   if (lines.length < 2) {
     return { rows: [], errors: [{ row: 0, message: 'CSV needs a header row and at least one data row' }] };
   }
 
   const headers = splitLine(lines[0]).map((h) => h.toLowerCase());
-  if (!headers.includes('teacher_name')) {
+  if (requireTeacher && !headers.includes('teacher_name')) {
     return { rows: [], errors: [{ row: 0, message: 'Missing required column: teacher_name' }] };
   }
 
@@ -82,7 +89,7 @@ export function parseTeacherCSV(content: string): ParseResult {
     };
 
     const teacherName = get('teacher_name');
-    if (!teacherName) {
+    if (requireTeacher && !teacherName) {
       errors.push({ row: i + 1, message: 'teacher_name is required' });
       continue;
     }
@@ -114,7 +121,21 @@ export function parseTeacherCSV(content: string): ParseResult {
 }
 
 /** Build a downloadable CSV template (header + commented instructions + examples). */
-export function teacherCsvTemplate(): string {
+export function teacherCsvTemplate(mode: 'teacher' | 'program' = 'teacher'): string {
+  if (mode === 'program') {
+    return [
+      'school,grade_low,grade_high,students_served,school_year,subject',
+      '# One row per home school the kids came from. The program name/type are set in the app.',
+      '# school: school name or building IRN (matched against the Ohio dataset; fix any in the grid)',
+      '# students_served: how many kids came from this school',
+      '# grade_low / grade_high (optional): e.g. 6, 8, K (defaults to the school span)',
+      '# school_year (optional): e.g. 2024-2025 (defaults to the current academic year)',
+      `# subject (optional): program tags, semicolon-separated. Allowed: ${VISIBILITY_TAGS.join(' | ')}`,
+      '# --- delete these comment lines and the examples below, then add your rows ---',
+      'Amanda-Clearcreek Middle School,6,8,8,2024-2025,Drones',
+      'Sandusky Middle School,7,8,5,2024-2025,',
+    ].join('\n');
+  }
   return [
     TEACHER_CSV_COLUMNS.join(','),
     '# teacher_name (required) | teacher_email (optional)',

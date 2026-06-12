@@ -597,11 +597,13 @@ export type Database = {
           grade_low: string
           id: string
           notes: string | null
+          program_name: string | null
+          program_type: string | null
           school_id: string
           school_year: string | null
           students_served: number | null
           subject: string | null
-          teacher_id: string
+          teacher_id: string | null
           updated_at: string
         }
         Insert: {
@@ -611,11 +613,13 @@ export type Database = {
           grade_low: string
           id?: string
           notes?: string | null
+          program_name?: string | null
+          program_type?: string | null
           school_id: string
           school_year?: string | null
           students_served?: number | null
           subject?: string | null
-          teacher_id: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -625,11 +629,13 @@ export type Database = {
           grade_low?: string
           id?: string
           notes?: string | null
+          program_name?: string | null
+          program_type?: string | null
           school_id?: string
           school_year?: string | null
           students_served?: number | null
           subject?: string | null
-          teacher_id?: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Relationships: [

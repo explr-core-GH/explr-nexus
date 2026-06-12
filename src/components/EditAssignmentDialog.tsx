@@ -134,6 +134,8 @@ export function EditAssignmentDialog({ assignment, onResolveSchool, onUpdate }: 
         subject: subjectTags.length ? subjectTags.join(', ') : null,
         students_served: servedNum,
         school_year: schoolYear,
+        program_name: assignment.program_name,
+        program_type: assignment.program_type,
         demographics_snapshot: snapshot,
       });
       handleOpenChange(false);
@@ -157,8 +159,9 @@ export function EditAssignmentDialog({ assignment, onResolveSchool, onUpdate }: 
             Edit Assignment
           </DialogTitle>
           <DialogDescription>
-            Update {assignment.teachers?.full_name ?? 'this teacher'}'s school, grade band, or details.
-            Changing the school or grades refreshes the demographic snapshot.
+            Update {assignment.teachers?.full_name ?? assignment.program_name ?? 'this engagement'}'s
+            school, grade band, or details. Changing the school or grades refreshes the demographic
+            snapshot.
           </DialogDescription>
         </DialogHeader>
 

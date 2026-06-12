@@ -18,9 +18,10 @@ import { parseTeacherCSV, teacherCsvTemplate, type DraftRow, type ParseResult } 
 
 interface TeacherCSVImportDialogProps {
   onImport: (rows: DraftRow[]) => void;
+  mode?: 'teacher' | 'program';
 }
 
-export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps) {
+export function TeacherCSVImportDialog({ onImport, mode = 'teacher' }: TeacherCSVImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ParseResult | null>(null);
@@ -39,11 +40,11 @@ export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps
   };
 
   const downloadTemplate = () => {
-    const blob = new Blob([teacherCsvTemplate()], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([teacherCsvTemplate(mode)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'teacher_assignments_template.csv';
+    link.download = mode === 'program' ? 'program_schools_template.csv' : 'teacher_assignments_template.csv';
     link.click();
     URL.revokeObjectURL(url);
     toast({ title: 'Template downloaded', description: 'Fill it out and upload to bulk-add assignments' });
@@ -58,7 +59,7 @@ export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps
     }
     setFile(selected);
     try {
-      setResult(parseTeacherCSV(await selected.text()));
+      setResult(parseTeacherCSV(await selected.text(), { requireTeacher: mode === 'teacher' }));
     } catch {
       toast({ title: 'Error', description: 'Failed to read file', variant: 'destructive' });
     }
@@ -83,7 +84,7 @@ export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            Import Teacher Assignments
+            {mode === 'program' ? 'Import Program Schools' : 'Import Teacher Assignments'}
           </DialogTitle>
           <DialogDescription>
             Upload a CSV to bulk-add teacher assignments. They land in the editable grid so you can
@@ -214,9 +215,19 @@ export function TeacherCSVImportDialog({ onImport }: TeacherCSVImportDialogProps
             <Alert>
               <FileSpreadsheet className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>Required:</strong> teacher_name<br />
-                <strong>Optional:</strong> teacher_email, school, grade_low, grade_high,
-                students_served, school_year, subject
+                {mode === 'program' ? (
+                  <>
+                    <strong>Required:</strong> school<br />
+                    <strong>Optional:</strong> grade_low, grade_high, students_served, school_year,
+                    subject. (Program name &amp; type are set in the app.)
+                  </>
+                ) : (
+                  <>
+                    <strong>Required:</strong> teacher_name<br />
+                    <strong>Optional:</strong> teacher_email, school, grade_low, grade_high,
+                    students_served, school_year, subject
+                  </>
+                )}
               </AlertDescription>
             </Alert>
           )}

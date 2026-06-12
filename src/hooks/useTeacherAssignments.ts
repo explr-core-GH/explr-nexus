@@ -15,7 +15,7 @@ export type TeacherAssignment = Omit<
 };
 
 export interface NewAssignment {
-  teacher_id: string;
+  teacher_id: string | null;
   school_id: string;
   grade_low: string;
   grade_high: string;
@@ -23,6 +23,8 @@ export interface NewAssignment {
   students_served?: number | null;
   school_year?: string | null;
   notes?: string | null;
+  program_name?: string | null;
+  program_type?: string | null;
   demographics_snapshot: DemographicsSnapshot;
 }
 
@@ -80,6 +82,8 @@ export function useTeacherAssignments() {
           students_served: input.students_served ?? null,
           school_year: input.school_year ?? null,
           notes: input.notes ?? null,
+          program_name: input.program_name ?? null,
+          program_type: input.program_type ?? null,
           demographics_snapshot: input.demographics_snapshot as unknown as Tables<'teacher_school_assignments'>['demographics_snapshot'],
         })
         .select('*, partner_schools(id,name,ohio_irn), teachers(id,full_name)')
@@ -127,6 +131,8 @@ export function useTeacherAssignments() {
           subject: input.subject ?? null,
           students_served: input.students_served ?? null,
           school_year: input.school_year ?? null,
+          program_name: input.program_name ?? null,
+          program_type: input.program_type ?? null,
           demographics_snapshot: input.demographics_snapshot as unknown as Tables<'teacher_school_assignments'>['demographics_snapshot'],
         })
         .eq('id', id)

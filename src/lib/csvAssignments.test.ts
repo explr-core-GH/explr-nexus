@@ -87,4 +87,17 @@ describe('parseTeacherCSV', () => {
     const res = parseTeacherCSV(`${header}\nAmy,,School,6,8,,2025,`);
     expect(res.rows[0].schoolYear).toBe('2025-2026');
   });
+
+  it('program mode: parses rows without a teacher column', () => {
+    const programHeader = 'school,grade_low,grade_high,students_served,school_year,subject';
+    const res = parseTeacherCSV(`${programHeader}\nLincoln Middle,6,8,8,2024-2025,Drones`, {
+      requireTeacher: false,
+    });
+    expect(res.errors).toHaveLength(0);
+    expect(res.rows).toHaveLength(1);
+    expect(res.rows[0].teacherName).toBe('');
+    expect(res.rows[0].schoolText).toBe('Lincoln Middle');
+    expect(res.rows[0].studentsServed).toBe('8');
+    expect(res.rows[0].subjectTags).toEqual(['Drones']);
+  });
 });
