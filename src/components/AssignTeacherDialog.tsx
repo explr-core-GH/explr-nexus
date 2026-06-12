@@ -332,6 +332,9 @@ export function AssignTeacherDialog({
               onChange={(e) => setStudentsServed(e.target.value)}
               className="sm:max-w-[180px]"
             />
+            <p className="text-xs text-muted-foreground">
+              Leave blank to count the full grade-band reach as served.
+            </p>
           </div>
 
           {/* Live preview */}
