@@ -25,6 +25,7 @@ import type { Teacher, SelectableTeacher } from '@/hooks/useTeachers';
 import type { NewAssignment } from '@/hooks/useTeacherAssignments';
 import { ORDERED_GRADES, GRADE_LABELS, gradesInBand } from '@/lib/grades';
 import { buildSnapshot } from '@/lib/schoolDemographics';
+import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 
 interface AssignTeacherDialogProps {
   teacherOptions: SelectableTeacher[];
@@ -56,7 +57,7 @@ export function AssignTeacherDialog({
 
   const [gradeLow, setGradeLow] = useState('06');
   const [gradeHigh, setGradeHigh] = useState('08');
-  const [subject, setSubject] = useState('');
+  const [subjectTags, setSubjectTags] = useState<string[]>([]);
   const [studentsServed, setStudentsServed] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -77,7 +78,7 @@ export function AssignTeacherDialog({
     setSelectedSchool(null);
     setGradeLow('06');
     setGradeHigh('08');
-    setSubject('');
+    setSubjectTags([]);
     setStudentsServed('');
   };
 
@@ -129,7 +130,7 @@ export function AssignTeacherDialog({
         school_id: school.id,
         grade_low: gradeLow,
         grade_high: gradeHigh,
-        subject: subject.trim() || null,
+        subject: subjectTags.length ? subjectTags.join(', ') : null,
         students_served: servedNum,
         school_year: selectedSchool.school_year,
         demographics_snapshot: buildSnapshot(selectedSchool, gradeLow, gradeHigh, servedNum),
@@ -315,27 +316,22 @@ export function AssignTeacherDialog({
             <p className="text-xs text-destructive">"From" grade must be at or below "To" grade.</p>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="subject">Subject (optional)</Label>
-              <Input
-                id="subject"
-                placeholder="e.g. Science"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="served">Students served (optional)</Label>
-              <Input
-                id="served"
-                type="number"
-                min={0}
-                placeholder="actual headcount"
-                value={studentsServed}
-                onChange={(e) => setStudentsServed(e.target.value)}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Subject / Program (optional)</Label>
+            <TagsCheckboxGroup selectedTags={subjectTags} onTagsChange={setSubjectTags} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="served">Students served (optional)</Label>
+            <Input
+              id="served"
+              type="number"
+              min={0}
+              placeholder="actual headcount"
+              value={studentsServed}
+              onChange={(e) => setStudentsServed(e.target.value)}
+              className="sm:max-w-[180px]"
+            />
           </div>
 
           {/* Live preview */}
