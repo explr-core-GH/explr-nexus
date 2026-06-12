@@ -13,6 +13,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,6 +31,7 @@ import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
 import type { TeacherAssignment, NewAssignment } from '@/hooks/useTeacherAssignments';
 import type { DemographicCounts } from '@/lib/schoolDemographics';
 import { GRADE_LABELS } from '@/lib/grades';
+import { schoolYearOptions } from '@/lib/schoolYears';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 
 const RACE_LABELS: Record<string, string> = {
@@ -81,6 +89,16 @@ export function GrantImpactDashboard({
   onResolveSchool,
 }: Props) {
   const [mode, setMode] = useState<Mode>('potential');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+
+  const years = useMemo(
+    () => schoolYearOptions(assignments.map((a) => a.school_year)),
+    [assignments]
+  );
+  const filteredAssignments = useMemo(
+    () => (yearFilter === 'all' ? assignments : assignments.filter((a) => a.school_year === yearFilter)),
+    [assignments, yearFilter]
+  );
 
   const data = useMemo(() => {
     let students = 0;
@@ -90,7 +108,7 @@ export function GrantImpactDashboard({
     let gifted = 0;
     const race = new Map<string, number>();
 
-    for (const a of assignments) {
+    for (const a of filteredAssignments) {
       const c = countsFor(a, mode);
       students += c.base;
       econ += c.economically_disadvantaged ?? 0;
@@ -104,14 +122,14 @@ export function GrantImpactDashboard({
 
     const sortedRace = [...race.entries()].sort((a, b) => b[1] - a[1]);
     return { students, econ, disab, el, gifted, sortedRace };
-  }, [assignments, mode]);
+  }, [filteredAssignments, mode]);
 
   const stats = [
     {
       label: mode === 'potential' ? 'Students Reached' : 'Students Served',
       value: data.students.toLocaleString(),
       icon: Users,
-      hint: `${assignments.length} assignment${assignments.length !== 1 ? 's' : ''}`,
+      hint: `${filteredAssignments.length} assignment${filteredAssignments.length !== 1 ? 's' : ''}${yearFilter !== 'all' ? ` · ${yearFilter}` : ''}`,
     },
     {
       label: 'Economically Disadvantaged',
@@ -155,7 +173,7 @@ export function GrantImpactDashboard({
       const s = v === null || v === undefined ? '' : String(v);
       return `"${s.replace(/"/g, '""')}"`;
     };
-    const rows = assignments.map((a) => {
+    const rows = filteredAssignments.map((a) => {
       const c = countsFor(a, mode);
       return [
         a.teachers?.full_name ?? '',
@@ -181,7 +199,7 @@ export function GrantImpactDashboard({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `grant-impact-${mode}.csv`;
+    a.download = `grant-impact-${mode}-${yearFilter === 'all' ? 'all-years' : yearFilter}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -211,7 +229,22 @@ export function GrantImpactDashboard({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* School year filter */}
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="bg-background w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-background border z-50">
+              <SelectItem value="all">All years</SelectItem>
+              {years.map((y) => (
+                <SelectItem key={y} value={y}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {/* Potential / Actual toggle */}
           <div className="inline-flex rounded-lg border p-0.5">
             <button
@@ -310,12 +343,20 @@ export function GrantImpactDashboard({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assignments.map((a) => (
+            {filteredAssignments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                  No assignments for {yearFilter}.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredAssignments.map((a) => (
               <TableRow key={a.id}>
                 <TableCell className="font-medium">{a.teachers?.full_name ?? '—'}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {a.partner_schools?.name ?? '—'}
                   {a.subject ? <span className="text-xs"> · {a.subject}</span> : ''}
+                  {a.school_year ? <span className="text-xs"> · {a.school_year}</span> : ''}
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
@@ -350,7 +391,8 @@ export function GrantImpactDashboard({
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

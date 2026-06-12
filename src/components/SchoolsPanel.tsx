@@ -76,15 +76,6 @@ export function SchoolsPanel() {
     return null;
   };
 
-  // Teachers already assigned drop out of the assign picker (one assignment per teacher; edit instead).
-  const assignedTeacherIds = useMemo(
-    () => new Set(assignments.map((a) => a.teacher_id)),
-    [assignments]
-  );
-  const availableTeachers = useMemo(
-    () => selectableTeachers.filter((t) => !t.teacherId || !assignedTeacherIds.has(t.teacherId)),
-    [selectableTeachers, assignedTeacherIds]
-  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -121,7 +112,8 @@ export function SchoolsPanel() {
         <div className="flex gap-2 flex-wrap">
           <AddTeacherDialog onAdd={addTeacher} />
           <AssignTeacherDialog
-            teacherOptions={availableTeachers}
+            teacherOptions={selectableTeachers}
+            assignments={assignments}
             onAddTeacher={addTeacher}
             onResolveTeacherId={resolveTeacherId}
             onResolveSchool={findOrCreateByOhioIrn}

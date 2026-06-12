@@ -26,6 +26,7 @@ import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
 import type { TeacherAssignment, NewAssignment } from '@/hooks/useTeacherAssignments';
 import { ORDERED_GRADES, GRADE_LABELS, gradesInBand } from '@/lib/grades';
 import { buildSnapshot, emptySnapshot } from '@/lib/schoolDemographics';
+import { currentAcademicYear, schoolYearOptions } from '@/lib/schoolYears';
 
 interface EditAssignmentDialogProps {
   assignment: TeacherAssignment;
@@ -43,8 +44,10 @@ export function EditAssignmentDialog({ assignment, onResolveSchool, onUpdate }: 
   const [schoolQuery, setSchoolQuery] = useState('');
   const { results, isLoading: searching } = useOhioSchools(schoolQuery);
 
+  const [schoolYear, setSchoolYear] = useState(assignment.school_year || currentAcademicYear());
   const [gradeLow, setGradeLow] = useState(assignment.grade_low);
   const [gradeHigh, setGradeHigh] = useState(assignment.grade_high);
+  const yearOptions = schoolYearOptions([assignment.school_year]);
   const [subjectTags, setSubjectTags] = useState<string[]>(
     assignment.subject ? assignment.subject.split(',').map((s) => s.trim()).filter(Boolean) : []
   );
@@ -76,6 +79,7 @@ export function EditAssignmentDialog({ assignment, onResolveSchool, onUpdate }: 
       // reset to the assignment's stored values
       setSelectedSchool(null);
       setSchoolQuery('');
+      setSchoolYear(assignment.school_year || currentAcademicYear());
       setGradeLow(assignment.grade_low);
       setGradeHigh(assignment.grade_high);
       setSubjectTags(
@@ -129,7 +133,7 @@ export function EditAssignmentDialog({ assignment, onResolveSchool, onUpdate }: 
         grade_high: gradeHigh,
         subject: subjectTags.length ? subjectTags.join(', ') : null,
         students_served: servedNum,
-        school_year: selectedSchool?.school_year ?? assignment.demographics_snapshot?.school_year ?? null,
+        school_year: schoolYear,
         demographics_snapshot: snapshot,
       });
       handleOpenChange(false);
@@ -159,6 +163,23 @@ export function EditAssignmentDialog({ assignment, onResolveSchool, onUpdate }: 
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          {/* School year */}
+          <div className="space-y-2">
+            <Label>School year</Label>
+            <Select value={schoolYear} onValueChange={setSchoolYear}>
+              <SelectTrigger className="bg-background sm:max-w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                {yearOptions.map((y) => (
+                  <SelectItem key={y} value={y}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* School */}
           <div className="space-y-2">
             <Label>School</Label>

@@ -22,13 +22,15 @@ import {
 import { useOhioSchools } from '@/hooks/useOhioSchools';
 import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
 import type { Teacher, SelectableTeacher } from '@/hooks/useTeachers';
-import type { NewAssignment } from '@/hooks/useTeacherAssignments';
+import type { NewAssignment, TeacherAssignment } from '@/hooks/useTeacherAssignments';
 import { ORDERED_GRADES, GRADE_LABELS, gradesInBand } from '@/lib/grades';
 import { buildSnapshot } from '@/lib/schoolDemographics';
+import { currentAcademicYear, schoolYearOptions } from '@/lib/schoolYears';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
 
 interface AssignTeacherDialogProps {
   teacherOptions: SelectableTeacher[];
+  assignments: TeacherAssignment[];
   onAddTeacher: (input: { full_name: string; email?: string | null }) => Promise<Teacher | null>;
   onResolveTeacherId: (sel: SelectableTeacher) => Promise<string | null>;
   onResolveSchool: (ohio: OhioSchool) => Promise<PartnerSchool | null>;
@@ -39,6 +41,7 @@ const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
 
 export function AssignTeacherDialog({
   teacherOptions,
+  assignments,
   onAddTeacher,
   onResolveTeacherId,
   onResolveSchool,
@@ -46,7 +49,20 @@ export function AssignTeacherDialog({
 }: AssignTeacherDialogProps) {
   const [open, setOpen] = useState(false);
 
+  const [schoolYear, setSchoolYear] = useState(currentAcademicYear());
   const [teacherKey, setTeacherKey] = useState('');
+
+  // One assignment per teacher PER YEAR: hide teachers already assigned for the chosen year.
+  const yearOptions = useMemo(
+    () => schoolYearOptions(assignments.map((a) => a.school_year)),
+    [assignments]
+  );
+  const availableTeachers = useMemo(() => {
+    const taken = new Set(
+      assignments.filter((a) => a.school_year === schoolYear).map((a) => a.teacher_id)
+    );
+    return teacherOptions.filter((t) => !t.teacherId || !taken.has(t.teacherId));
+  }, [teacherOptions, assignments, schoolYear]);
   const [addingTeacher, setAddingTeacher] = useState(false);
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newTeacherEmail, setNewTeacherEmail] = useState('');
@@ -70,6 +86,7 @@ export function AssignTeacherDialog({
   }, [selectedSchool, gradeLow, gradeHigh, servedNum, bandValid]);
 
   const reset = () => {
+    setSchoolYear(currentAcademicYear());
     setTeacherKey('');
     setAddingTeacher(false);
     setNewTeacherName('');
@@ -132,7 +149,7 @@ export function AssignTeacherDialog({
         grade_high: gradeHigh,
         subject: subjectTags.length ? subjectTags.join(', ') : null,
         students_served: servedNum,
-        school_year: selectedSchool.school_year,
+        school_year: schoolYear,
         demographics_snapshot: buildSnapshot(selectedSchool, gradeLow, gradeHigh, servedNum),
       });
       handleOpenChange(false);
@@ -162,6 +179,23 @@ export function AssignTeacherDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          {/* School year */}
+          <div className="space-y-2">
+            <Label>School year</Label>
+            <Select value={schoolYear} onValueChange={setSchoolYear}>
+              <SelectTrigger className="bg-background sm:max-w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                {yearOptions.map((y) => (
+                  <SelectItem key={y} value={y}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Teacher */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -199,12 +233,12 @@ export function AssignTeacherDialog({
                   <SelectValue placeholder="Select a teacher" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {teacherOptions.length === 0 ? (
+                  {availableTeachers.length === 0 ? (
                     <div className="py-2 px-3 text-sm text-muted-foreground">
-                      No teachers yet — add one
+                      All teachers are already assigned for {schoolYear} — add one or pick another year
                     </div>
                   ) : (
-                    teacherOptions.map((t) => (
+                    availableTeachers.map((t) => (
                       <SelectItem key={t.key} value={t.key}>
                         {t.full_name}
                         {t.email ? <span className="text-muted-foreground"> · {t.email}</span> : ''}
