@@ -4,6 +4,7 @@ import {
   computeBandReach,
   applyDemographics,
   buildSnapshot,
+  manualSnapshot,
 } from './schoolDemographics';
 import type { OhioSchool } from '@/hooks/usePartnerSchools';
 
@@ -93,5 +94,31 @@ describe('buildSnapshot', () => {
   it('leaves actual null when no headcount given', () => {
     const snap = buildSnapshot(school, '06', '08', null);
     expect(snap.actual).toBeNull();
+  });
+});
+
+describe('manualSnapshot', () => {
+  it('uses entered actual counts for both potential and actual, marked not estimated', () => {
+    const snap = manualSnapshot({
+      total: 226,
+      schoolYear: '2026-2027',
+      gradeLow: '05',
+      gradeHigh: '08',
+      counts: {
+        economically_disadvantaged: 150,
+        students_with_disabilities: 20,
+        english_learners: 10,
+        gifted: 5,
+        race_ethnicity: { black: 89, asian: 24, white: 20 },
+        gender: { boys: 128, girls: 88, other: 9 },
+      },
+    });
+    expect(snap.estimated).toBe(false);
+    expect(snap.potential_reach).toBe(226);
+    expect(snap.actual_served).toBe(226);
+    expect(snap.potential.base).toBe(226);
+    expect(snap.actual?.economically_disadvantaged).toBe(150);
+    expect(snap.potential.race_ethnicity.black).toBe(89);
+    expect(snap.potential.gender?.boys).toBe(128);
   });
 });

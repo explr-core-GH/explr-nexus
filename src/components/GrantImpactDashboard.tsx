@@ -33,7 +33,9 @@ import type { DemographicCounts } from '@/lib/schoolDemographics';
 import { GRADE_LABELS } from '@/lib/grades';
 import { schoolYearOptions } from '@/lib/schoolYears';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
+import { ProgramDemographicsDialog } from '@/components/ProgramDemographicsDialog';
 import { ChangeYearDialog } from '@/components/ChangeYearDialog';
+import { Pencil } from 'lucide-react';
 
 const RACE_LABELS: Record<string, string> = {
   white: 'White',
@@ -117,6 +119,7 @@ export function GrantImpactDashboard({
     let el = 0;
     let gifted = 0;
     const race = new Map<string, number>();
+    const gender = new Map<string, number>();
 
     for (const a of filteredAssignments) {
       const c = countsFor(a, mode);
@@ -128,10 +131,14 @@ export function GrantImpactDashboard({
       for (const [k, v] of Object.entries(c.race_ethnicity ?? {})) {
         race.set(k, (race.get(k) ?? 0) + v);
       }
+      for (const [k, v] of Object.entries(c.gender ?? {})) {
+        gender.set(k, (gender.get(k) ?? 0) + v);
+      }
     }
 
     const sortedRace = [...race.entries()].sort((a, b) => b[1] - a[1]);
-    return { students, econ, disab, el, gifted, sortedRace };
+    const sortedGender = [...gender.entries()].sort((a, b) => b[1] - a[1]);
+    return { students, econ, disab, el, gifted, sortedRace, sortedGender };
   }, [filteredAssignments, mode]);
 
   const stats = [
@@ -179,6 +186,9 @@ export function GrantImpactDashboard({
       'English Learners',
       'Gifted',
       ...raceKeys.map((k) => RACE_LABELS[k]),
+      'Boys',
+      'Girls',
+      'Other Gender',
       'School Year',
     ];
     const escape = (v: string | number | null | undefined) => {
@@ -203,6 +213,9 @@ export function GrantImpactDashboard({
         c.english_learners ?? '',
         c.gifted ?? '',
         ...raceKeys.map((k) => c.race_ethnicity?.[k] ?? ''),
+        c.gender?.boys ?? '',
+        c.gender?.girls ?? '',
+        c.gender?.other ?? '',
         a.demographics_snapshot?.school_year ?? '',
       ]
         .map(escape)
@@ -360,6 +373,27 @@ export function GrantImpactDashboard({
         </p>
       </div>
 
+      {/* Gender breakdown — only when some assignment has actual gender data */}
+      {data.sortedGender.length > 0 && (
+        <div className="bg-card border rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            <h4 className="font-semibold">Students by Gender</h4>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {data.sortedGender.map(([key, count]) => (
+              <div key={key} className="bg-muted/40 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground capitalize">{key}</p>
+                <p className="text-xl font-bold">{count.toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            From programs with actual (entered) demographics.
+          </p>
+        </div>
+      )}
+
       {/* Assignments table */}
       <div className="border rounded-xl overflow-hidden">
         <Table>
@@ -420,11 +454,24 @@ export function GrantImpactDashboard({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <EditAssignmentDialog
-                      assignment={a}
-                      onResolveSchool={onResolveSchool}
-                      onUpdate={onUpdateAssignment}
-                    />
+                    {a.school_id == null ? (
+                      <ProgramDemographicsDialog
+                        assignment={a}
+                        onUpdate={onUpdateAssignment}
+                        trigger={
+                          <Button variant="ghost" size="sm" className="gap-1.5">
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                        }
+                      />
+                    ) : (
+                      <EditAssignmentDialog
+                        assignment={a}
+                        onResolveSchool={onResolveSchool}
+                        onUpdate={onUpdateAssignment}
+                      />
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

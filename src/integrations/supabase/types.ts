@@ -599,7 +599,7 @@ export type Database = {
           notes: string | null
           program_name: string | null
           program_type: string | null
-          school_id: string
+          school_id: string | null
           school_year: string | null
           students_served: number | null
           subject: string | null
@@ -615,7 +615,7 @@ export type Database = {
           notes?: string | null
           program_name?: string | null
           program_type?: string | null
-          school_id: string
+          school_id?: string | null
           school_year?: string | null
           students_served?: number | null
           subject?: string | null
@@ -631,7 +631,7 @@ export type Database = {
           notes?: string | null
           program_name?: string | null
           program_type?: string | null
-          school_id?: string
+          school_id?: string | null
           school_year?: string | null
           students_served?: number | null
           subject?: string | null

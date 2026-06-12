@@ -16,7 +16,7 @@ export type TeacherAssignment = Omit<
 
 export interface NewAssignment {
   teacher_id: string | null;
-  school_id: string;
+  school_id: string | null;
   grade_low: string;
   grade_high: string;
   subject?: string | null;

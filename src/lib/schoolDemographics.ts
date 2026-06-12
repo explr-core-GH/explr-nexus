@@ -22,6 +22,7 @@ export interface DemographicCounts {
   english_learners: number | null;
   gifted: number | null;
   race_ethnicity: Record<string, number>;
+  gender?: Record<string, number>; // only set for manually-entered actual counts
 }
 
 export interface DemographicsSnapshot {
@@ -33,7 +34,7 @@ export interface DemographicsSnapshot {
   actual_served: number | null;
   potential: DemographicCounts;
   actual: DemographicCounts | null;
-  estimated: true;
+  estimated: boolean;
 }
 
 const pctOf = (pct: number | null | undefined, base: number): number | null =>
@@ -94,6 +95,48 @@ export function emptySnapshot(
     potential: ZERO_COUNTS(0),
     actual: studentsServed != null ? ZERO_COUNTS(studentsServed) : null,
     estimated: true,
+  };
+}
+
+export interface ManualCounts {
+  economically_disadvantaged: number | null;
+  students_with_disabilities: number | null;
+  english_learners: number | null;
+  gifted: number | null;
+  race_ethnicity: Record<string, number>;
+  gender: Record<string, number>;
+}
+
+/**
+ * Build a snapshot from manually-entered ACTUAL counts (e.g. a camp's registration data).
+ * potential == actual == the entered numbers, and it is marked `estimated: false`.
+ */
+export function manualSnapshot(input: {
+  total: number;
+  schoolYear: string | null;
+  gradeLow: string;
+  gradeHigh: string;
+  counts: ManualCounts;
+}): DemographicsSnapshot {
+  const counts: DemographicCounts = {
+    base: input.total,
+    economically_disadvantaged: input.counts.economically_disadvantaged,
+    students_with_disabilities: input.counts.students_with_disabilities,
+    english_learners: input.counts.english_learners,
+    gifted: input.counts.gifted,
+    race_ethnicity: input.counts.race_ethnicity,
+    gender: input.counts.gender,
+  };
+  return {
+    school_irn: null,
+    school_year: input.schoolYear,
+    grade_low: input.gradeLow,
+    grade_high: input.gradeHigh,
+    potential_reach: input.total,
+    actual_served: input.total,
+    potential: counts,
+    actual: counts,
+    estimated: false,
   };
 }
 

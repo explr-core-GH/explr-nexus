@@ -28,6 +28,7 @@ import { AddTeacherDialog } from '@/components/AddTeacherDialog';
 import { AddOrganizationDialog } from '@/components/AddOrganizationDialog';
 import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
 import { BulkAssignmentsPanel } from '@/components/BulkAssignmentsPanel';
+import { ProgramDemographicsDialog } from '@/components/ProgramDemographicsDialog';
 import { GrantImpactDashboard } from '@/components/GrantImpactDashboard';
 import { usePartnerSchools } from '@/hooks/usePartnerSchools';
 import { useTeacherAssignments } from '@/hooks/useTeacherAssignments';
@@ -114,6 +115,7 @@ export function SchoolsPanel() {
         <div className="flex gap-2 flex-wrap">
           <AddTeacherDialog onAdd={addTeacher} />
           <AddOrganizationDialog onAdd={addOrganization} />
+          <ProgramDemographicsDialog onCreate={addAssignment} onUpdate={updateAssignment} />
           <AssignTeacherDialog
             teacherOptions={selectableTeachers}
             assignments={assignments}
