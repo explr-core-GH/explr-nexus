@@ -24,8 +24,8 @@ export function normalizeSchoolYear(input: string): string {
   return t;
 }
 
-/** Recent academic years, most-recent first (default: 2 back through 1 forward). */
-export function recentSchoolYears(now: Date = new Date(), back = 2, forward = 1): string[] {
+/** Recent academic years, most-recent first (default: 1 back through 1 forward). */
+export function recentSchoolYears(now: Date = new Date(), back = 1, forward = 1): string[] {
   const y = now.getFullYear();
   const base = now.getMonth() >= 6 ? y : y - 1;
   const years: string[] = [];
