@@ -62,17 +62,15 @@ function countsFor(a: TeacherAssignment, mode: Mode): DemographicCounts {
   const snap = a.demographics_snapshot;
   if (!snap) return ZERO;
   if (mode === 'actual') {
-    // No headcount entered → actual served defaults to the full potential reach.
-    if (a.students_served == null) return snap.potential ?? ZERO;
-    return snap.actual ?? { ...ZERO, base: a.students_served };
+    // Actual served counts only entered headcounts; blank assignments are not counted.
+    return snap.actual ?? { ...ZERO, base: a.students_served ?? 0 };
   }
   return snap.potential ?? ZERO;
 }
 
-/** The served headcount for an assignment, defaulting to potential reach when blank. */
+/** The served headcount for an assignment (only what was actually entered). */
 function effectiveServed(a: TeacherAssignment): number | null {
-  if (a.students_served != null) return a.students_served;
-  return a.demographics_snapshot?.potential_reach ?? null;
+  return a.students_served ?? null;
 }
 
 const gradeLabel = (g: string) => GRADE_LABELS[g as keyof typeof GRADE_LABELS] ?? g;
@@ -319,8 +317,9 @@ export function GrantImpactDashboard({
 
       {mode === 'actual' && (
         <p className="text-xs text-muted-foreground -mt-2">
-          "Actual served" uses the headcount entered per assignment; assignments without a headcount
-          fall back to their full potential reach.
+          "Actual served" counts only the headcount entered per assignment; assignments without a
+          headcount aren't counted (enter one to include them). "Potential reach" is the full
+          grade-band enrollment — an opportunity ceiling, not a per-teacher count.
         </p>
       )}
 
@@ -448,9 +447,6 @@ export function GrantImpactDashboard({
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {effectiveServed(a)?.toLocaleString() ?? '—'}
-                  {a.students_served == null && a.demographics_snapshot?.potential_reach
-                    ? <span className="text-xs text-muted-foreground"> (reach)</span>
-                    : ''}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
