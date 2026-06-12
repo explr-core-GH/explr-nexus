@@ -35,7 +35,7 @@ import { useSelectableUsers } from '@/hooks/useSelectableUsers';
 
 export function SchoolsPanel() {
   const { schools, addSchool, findOrCreateByOhioIrn, deleteSchool } = usePartnerSchools();
-  const { assignments, addAssignment, deleteAssignment } = useTeacherAssignments();
+  const { assignments, addAssignment, updateAssignment, deleteAssignment } = useTeacherAssignments();
   const { teachers, addTeacher, findOrCreateForProfile, deleteTeacher } = useTeachers();
   const { organizations, deleteOrganization } = useOrganizations();
   const { users } = useSelectableUsers();
@@ -76,6 +76,16 @@ export function SchoolsPanel() {
     return null;
   };
 
+  // Teachers already assigned drop out of the assign picker (one assignment per teacher; edit instead).
+  const assignedTeacherIds = useMemo(
+    () => new Set(assignments.map((a) => a.teacher_id)),
+    [assignments]
+  );
+  const availableTeachers = useMemo(
+    () => selectableTeachers.filter((t) => !t.teacherId || !assignedTeacherIds.has(t.teacherId)),
+    [selectableTeachers, assignedTeacherIds]
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return schools;
@@ -111,7 +121,7 @@ export function SchoolsPanel() {
         <div className="flex gap-2 flex-wrap">
           <AddTeacherDialog onAdd={addTeacher} />
           <AssignTeacherDialog
-            teacherOptions={selectableTeachers}
+            teacherOptions={availableTeachers}
             onAddTeacher={addTeacher}
             onResolveTeacherId={resolveTeacherId}
             onResolveSchool={findOrCreateByOhioIrn}
@@ -341,6 +351,8 @@ export function SchoolsPanel() {
         schools={schools}
         assignments={assignments}
         onDeleteAssignment={deleteAssignment}
+        onUpdateAssignment={updateAssignment}
+        onResolveSchool={findOrCreateByOhioIrn}
       />
     </div>
   );

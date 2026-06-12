@@ -104,6 +104,53 @@ export function useTeacherAssignments() {
     }
   };
 
+  const updateAssignment = async (
+    id: string,
+    input: Omit<NewAssignment, 'teacher_id'>
+  ) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can edit assignments',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('teacher_school_assignments')
+        .update({
+          school_id: input.school_id,
+          grade_low: input.grade_low,
+          grade_high: input.grade_high,
+          subject: input.subject ?? null,
+          students_served: input.students_served ?? null,
+          school_year: input.school_year ?? null,
+          demographics_snapshot: input.demographics_snapshot as unknown as Tables<'teacher_school_assignments'>['demographics_snapshot'],
+        })
+        .eq('id', id)
+        .select('*, partner_schools(id,name,ohio_irn), teachers(id,full_name)')
+        .single();
+
+      if (error) throw error;
+
+      setAssignments((prev) =>
+        prev.map((a) => (a.id === id ? (data as unknown as TeacherAssignment) : a))
+      );
+      toast({ title: 'Assignment Updated' });
+      return data as unknown as TeacherAssignment;
+    } catch (error: any) {
+      console.error('Error updating assignment:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update assignment',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+
   const deleteAssignment = async (id: string) => {
     if (!isAdmin) {
       toast({
@@ -134,5 +181,5 @@ export function useTeacherAssignments() {
     }
   };
 
-  return { assignments, isLoading, addAssignment, deleteAssignment, refetch: fetchAssignments };
+  return { assignments, isLoading, addAssignment, updateAssignment, deleteAssignment, refetch: fetchAssignments };
 }

@@ -20,10 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { PartnerSchool } from '@/hooks/usePartnerSchools';
-import type { TeacherAssignment } from '@/hooks/useTeacherAssignments';
+import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
+import type { TeacherAssignment, NewAssignment } from '@/hooks/useTeacherAssignments';
 import type { DemographicCounts } from '@/lib/schoolDemographics';
 import { GRADE_LABELS } from '@/lib/grades';
+import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 
 const RACE_LABELS: Record<string, string> = {
   white: 'White',
@@ -59,9 +60,16 @@ interface Props {
   schools: PartnerSchool[];
   assignments: TeacherAssignment[];
   onDeleteAssignment: (id: string) => Promise<boolean>;
+  onUpdateAssignment: (id: string, input: Omit<NewAssignment, 'teacher_id'>) => Promise<unknown>;
+  onResolveSchool: (ohio: OhioSchool) => Promise<PartnerSchool | null>;
 }
 
-export function GrantImpactDashboard({ assignments, onDeleteAssignment }: Props) {
+export function GrantImpactDashboard({
+  assignments,
+  onDeleteAssignment,
+  onUpdateAssignment,
+  onResolveSchool,
+}: Props) {
   const [mode, setMode] = useState<Mode>('potential');
 
   const data = useMemo(() => {
@@ -311,15 +319,22 @@ export function GrantImpactDashboard({ assignments, onDeleteAssignment }: Props)
                   {a.students_served?.toLocaleString() ?? '—'}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-destructive hover:text-destructive"
-                    onClick={() => onDeleteAssignment(a.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Remove</span>
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <EditAssignmentDialog
+                      assignment={a}
+                      onResolveSchool={onResolveSchool}
+                      onUpdate={onUpdateAssignment}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-destructive hover:text-destructive"
+                      onClick={() => onDeleteAssignment(a.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Remove</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

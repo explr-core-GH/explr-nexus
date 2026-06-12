@@ -69,6 +69,34 @@ export function applyDemographics(school: OhioSchool, base: number): Demographic
   };
 }
 
+const ZERO_COUNTS = (base: number): DemographicCounts => ({
+  base,
+  economically_disadvantaged: null,
+  students_with_disabilities: null,
+  english_learners: null,
+  gifted: null,
+  race_ethnicity: {},
+});
+
+/** Snapshot for a school with no Ohio data: records reach/headcount, no demographic estimates. */
+export function emptySnapshot(
+  low: string,
+  high: string,
+  studentsServed: number | null
+): DemographicsSnapshot {
+  return {
+    school_irn: null,
+    school_year: null,
+    grade_low: low,
+    grade_high: high,
+    potential_reach: 0,
+    actual_served: studentsServed,
+    potential: ZERO_COUNTS(0),
+    actual: studentsServed != null ? ZERO_COUNTS(studentsServed) : null,
+    estimated: true,
+  };
+}
+
 /** Build the frozen snapshot stored on a teacher_school_assignment at assign time. */
 export function buildSnapshot(
   school: OhioSchool,
