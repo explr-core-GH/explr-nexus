@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Briefcase, KeyRound } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Briefcase, KeyRound, GraduationCap, Heart } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,15 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+import { SchoolMultiSelect } from '@/components/SchoolMultiSelect';
+import type { OhioSchool } from '@/hooks/usePartnerSchools';
+import {
+  getProfileId,
+  registerEducatorSchools,
+  registerOrganizationSchools,
+} from '@/lib/registration';
+
+type RegistrationType = 'educator' | 'organization';
 
 
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -42,6 +51,8 @@ const Auth = () => {
   const [organizationName, setOrganizationName] = useState('');
   const [position, setPosition] = useState('');
   const [accessCode, setAccessCode] = useState('');
+  const [registrationType, setRegistrationType] = useState<RegistrationType>('educator');
+  const [selectedSchools, setSelectedSchools] = useState<OhioSchool[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const { toast } = useToast();
@@ -124,6 +135,22 @@ const Auth = () => {
           
           if (profileError) {
             console.error('Error updating profile:', profileError);
+          }
+
+          // Create teacher/org records + chosen school links (counts immediately)
+          if (selectedSchools.length > 0) {
+            try {
+              const profileId = await getProfileId(data.user.id);
+              if (profileId) {
+                if (registrationType === 'educator') {
+                  await registerEducatorSchools(profileId, fullName, email, selectedSchools);
+                } else {
+                  await registerOrganizationSchools(profileId, organizationName, selectedSchools);
+                }
+              }
+            } catch (regError) {
+              console.error('Error registering schools:', regError);
+            }
           }
 
           // Call edge function to assign role based on access code
@@ -212,6 +239,36 @@ const Auth = () => {
               {!isLogin && (
                 <>
                   <div className="space-y-2">
+                    <Label>I am registering as *</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRegistrationType('educator')}
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                          registrationType === 'educator'
+                            ? 'border-accent bg-accent/10 text-accent font-medium'
+                            : 'border-border text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        <GraduationCap className="h-4 w-4" />
+                        Educator
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegistrationType('organization')}
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                          registrationType === 'organization'
+                            ? 'border-accent bg-accent/10 text-accent font-medium'
+                            : 'border-border text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        <Heart className="h-4 w-4" />
+                        Organization / Nonprofit
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name *</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -230,7 +287,9 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="organizationName">School/Organization Name *</Label>
+                    <Label htmlFor="organizationName">
+                      {registrationType === 'organization' ? 'Organization Name *' : 'School/Organization Name *'}
+                    </Label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -265,6 +324,13 @@ const Auth = () => {
                     )}
                   </div>
 
+                  <div className="space-y-2">
+                    <Label>
+                      Schools you work with{' '}
+                      <span className="text-muted-foreground font-normal">(optional, choose one or more)</span>
+                    </Label>
+                    <SchoolMultiSelect selected={selectedSchools} onChange={setSelectedSchools} />
+                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="accessCode">Access Code (Optional)</Label>

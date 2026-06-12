@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { School, Map as MapIcon, Search, Trash2, GraduationCap } from 'lucide-react';
+import { School, Map as MapIcon, Search, Trash2, GraduationCap, User, Building2, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,14 +24,19 @@ import {
 } from '@/components/ui/alert-dialog';
 import { LocationsMap } from '@/components/LocationsMap';
 import { AddSchoolDialog } from '@/components/AddSchoolDialog';
+import { AddTeacherDialog } from '@/components/AddTeacherDialog';
 import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
 import { GrantImpactDashboard } from '@/components/GrantImpactDashboard';
 import { usePartnerSchools } from '@/hooks/usePartnerSchools';
 import { useTeacherAssignments } from '@/hooks/useTeacherAssignments';
+import { useTeachers } from '@/hooks/useTeachers';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 export function SchoolsPanel() {
-  const { schools, addSchool, deleteSchool } = usePartnerSchools();
+  const { schools, addSchool, findOrCreateByOhioIrn, deleteSchool } = usePartnerSchools();
   const { assignments, addAssignment, deleteAssignment } = useTeacherAssignments();
+  const { teachers, addTeacher, deleteTeacher } = useTeachers();
+  const { organizations, deleteOrganization } = useOrganizations();
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -66,8 +71,14 @@ export function SchoolsPanel() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <AssignTeacherDialog schools={schools} onAssign={addAssignment} />
+        <div className="flex gap-2 flex-wrap">
+          <AddTeacherDialog onAdd={addTeacher} />
+          <AssignTeacherDialog
+            teachers={teachers}
+            onAddTeacher={addTeacher}
+            onResolveSchool={findOrCreateByOhioIrn}
+            onAssign={addAssignment}
+          />
           <AddSchoolDialog onAdd={addSchool} />
         </div>
       </div>
@@ -206,6 +217,82 @@ export function SchoolsPanel() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Teachers + Organizations */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-card border rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <User className="h-5 w-5 text-muted-foreground" />
+            <h3 className="font-semibold">Teachers</h3>
+            <Badge variant="secondary" className="ml-auto">{teachers.length}</Badge>
+          </div>
+          {teachers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No teachers yet.</p>
+          ) : (
+            <div className="divide-y max-h-72 overflow-y-auto">
+              {teachers.map((t) => (
+                <div key={t.id} className="flex items-center justify-between gap-2 py-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{t.full_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {t.email || (t.profile_id ? 'Registered user' : 'Manual entry')}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive shrink-0"
+                    onClick={() => deleteTeacher(t.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-card border rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-muted-foreground" />
+            <h3 className="font-semibold">Organizations & Nonprofits</h3>
+            <Badge variant="secondary" className="ml-auto">{organizations.length}</Badge>
+          </div>
+          {organizations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No organizations yet.</p>
+          ) : (
+            <div className="divide-y max-h-72 overflow-y-auto">
+              {organizations.map((o) => (
+                <div key={o.id} className="py-2 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-medium truncate">{o.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive shrink-0"
+                      onClick={() => deleteOrganization(o.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {o.organization_schools.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pl-6">
+                      {o.organization_schools.map((os) => (
+                        <Badge key={os.school_id} variant="outline" className="text-xs">
+                          {os.partner_schools?.name ?? 'School'}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Assignments + grant reporting */}

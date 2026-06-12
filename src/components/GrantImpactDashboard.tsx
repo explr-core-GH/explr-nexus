@@ -140,7 +140,7 @@ export function GrantImpactDashboard({ assignments, onDeleteAssignment }: Props)
     const rows = assignments.map((a) => {
       const c = countsFor(a, mode);
       return [
-        a.profiles?.full_name ?? '',
+        a.teachers?.full_name ?? '',
         a.partner_schools?.name ?? '',
         a.partner_schools?.ohio_irn ?? '',
         `${gradeLabel(a.grade_low)}-${gradeLabel(a.grade_high)}`,
@@ -294,7 +294,7 @@ export function GrantImpactDashboard({ assignments, onDeleteAssignment }: Props)
           <TableBody>
             {assignments.map((a) => (
               <TableRow key={a.id}>
-                <TableCell className="font-medium">{a.profiles?.full_name ?? '—'}</TableCell>
+                <TableCell className="font-medium">{a.teachers?.full_name ?? '—'}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {a.partner_schools?.name ?? '—'}
                   {a.subject ? <span className="text-xs"> · {a.subject}</span> : ''}

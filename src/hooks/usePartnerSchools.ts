@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
+import { findOrCreatePartnerSchool } from '@/lib/partnerSchools';
 
 export type OhioSchool = Tables<'ohio_schools'>;
 
@@ -65,15 +66,7 @@ export function usePartnerSchools() {
     ohio_irn?: string | null;
     notes?: string | null;
   }) => {
-    if (!isAdmin) {
-      toast({
-        title: 'Permission Denied',
-        description: 'Only admins can add schools',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
+    // Inserts are allowed for any authenticated user (RLS); self-service adds count immediately.
     try {
       let coords = {
         latitude: school.latitude ?? null,
@@ -117,6 +110,25 @@ export function usePartnerSchools() {
     }
   };
 
+  /**
+   * Resolve an Ohio school to a partner school (existing-by-IRN or newly created), keeping
+   * local state in sync. Used by the assign dialog when a user picks an Ohio school.
+   */
+  const findOrCreateByOhioIrn = async (ohio: OhioSchool): Promise<PartnerSchool | null> => {
+    const cached = schools.find((s) => s.ohio_irn === ohio.irn);
+    if (cached) return cached;
+
+    const row = await findOrCreatePartnerSchool(ohio);
+    if (!row) return null;
+    const withDemo: PartnerSchool = { ...row, ohio_schools: ohio };
+    setSchools((prev) =>
+      prev.some((s) => s.id === withDemo.id)
+        ? prev
+        : [...prev, withDemo].sort((a, b) => a.name.localeCompare(b.name))
+    );
+    return withDemo;
+  };
+
   const deleteSchool = async (id: string) => {
     if (!isAdmin) {
       toast({
@@ -148,6 +160,7 @@ export function usePartnerSchools() {
     schools,
     isLoading,
     addSchool,
+    findOrCreateByOhioIrn,
     deleteSchool,
     refetch: fetchSchools,
   };

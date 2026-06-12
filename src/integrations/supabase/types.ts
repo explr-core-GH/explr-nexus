@@ -321,6 +321,112 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_type: string
+          profile_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_type?: string
+          profile_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_type?: string
+          profile_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_schools: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          school_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          school_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_schools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_schools_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "partner_schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          profile_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          profile_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          profile_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teachers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ohio_schools: {
         Row: {
           address: string | null
@@ -486,7 +592,7 @@ export type Database = {
             foreignKeyName: "teacher_school_assignments_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
         ]

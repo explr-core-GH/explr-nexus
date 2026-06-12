@@ -11,7 +11,7 @@ export type TeacherAssignment = Omit<
 > & {
   demographics_snapshot: DemographicsSnapshot;
   partner_schools: { id: string; name: string; ohio_irn: string | null } | null;
-  profiles: { id: string; full_name: string } | null;
+  teachers: { id: string; full_name: string } | null;
 };
 
 export interface NewAssignment {
@@ -36,7 +36,7 @@ export function useTeacherAssignments() {
     try {
       const { data, error } = await supabase
         .from('teacher_school_assignments')
-        .select('*, partner_schools(id,name,ohio_irn), profiles(id,full_name)')
+        .select('*, partner_schools(id,name,ohio_irn), teachers(id,full_name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -82,7 +82,7 @@ export function useTeacherAssignments() {
           notes: input.notes ?? null,
           demographics_snapshot: input.demographics_snapshot as unknown as Tables<'teacher_school_assignments'>['demographics_snapshot'],
         })
-        .select('*, partner_schools(id,name,ohio_irn), profiles(id,full_name)')
+        .select('*, partner_schools(id,name,ohio_irn), teachers(id,full_name)')
         .single();
 
       if (error) throw error;

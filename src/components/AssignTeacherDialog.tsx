@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { GraduationCap, Plus, Users } from 'lucide-react';
+import { GraduationCap, Plus, Users, Search, Check, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -18,44 +19,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserSelect } from '@/components/UserSelect';
-import { useSelectableUsers } from '@/hooks/useSelectableUsers';
-import type { PartnerSchool } from '@/hooks/usePartnerSchools';
+import { useOhioSchools } from '@/hooks/useOhioSchools';
+import type { OhioSchool, PartnerSchool } from '@/hooks/usePartnerSchools';
+import type { Teacher } from '@/hooks/useTeachers';
 import type { NewAssignment } from '@/hooks/useTeacherAssignments';
 import { ORDERED_GRADES, GRADE_LABELS, gradesInBand } from '@/lib/grades';
 import { buildSnapshot } from '@/lib/schoolDemographics';
 
 interface AssignTeacherDialogProps {
-  schools: PartnerSchool[];
+  teachers: Teacher[];
+  onAddTeacher: (input: { full_name: string; email?: string | null }) => Promise<Teacher | null>;
+  onResolveSchool: (ohio: OhioSchool) => Promise<PartnerSchool | null>;
   onAssign: (input: NewAssignment) => Promise<unknown>;
 }
 
-export function AssignTeacherDialog({ schools, onAssign }: AssignTeacherDialogProps) {
-  const { users } = useSelectableUsers();
+const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
+
+export function AssignTeacherDialog({
+  teachers,
+  onAddTeacher,
+  onResolveSchool,
+  onAssign,
+}: AssignTeacherDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const [teacherUserId, setTeacherUserId] = useState('');
-  const [schoolId, setSchoolId] = useState('');
+  const [teacherId, setTeacherId] = useState('');
+  const [addingTeacher, setAddingTeacher] = useState(false);
+  const [newTeacherName, setNewTeacherName] = useState('');
+  const [newTeacherEmail, setNewTeacherEmail] = useState('');
+
+  const [schoolQuery, setSchoolQuery] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState<OhioSchool | null>(null);
+  const { results, isLoading: searching } = useOhioSchools(schoolQuery);
+
   const [gradeLow, setGradeLow] = useState('06');
   const [gradeHigh, setGradeHigh] = useState('08');
   const [subject, setSubject] = useState('');
   const [studentsServed, setStudentsServed] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const selectedSchool = schools.find((s) => s.id === schoolId) || null;
-  const teacherProfileId = users.find((u) => u.user_id === teacherUserId)?.id || '';
-
   const bandValid = gradesInBand(gradeLow, gradeHigh).length > 0;
   const servedNum = studentsServed.trim() ? parseInt(studentsServed, 10) : null;
 
   const preview = useMemo(() => {
-    if (!selectedSchool?.ohio_schools || !bandValid) return null;
-    return buildSnapshot(selectedSchool.ohio_schools, gradeLow, gradeHigh, servedNum);
+    if (!selectedSchool || !bandValid) return null;
+    return buildSnapshot(selectedSchool, gradeLow, gradeHigh, servedNum);
   }, [selectedSchool, gradeLow, gradeHigh, servedNum, bandValid]);
 
   const reset = () => {
-    setTeacherUserId('');
-    setSchoolId('');
+    setTeacherId('');
+    setAddingTeacher(false);
+    setNewTeacherName('');
+    setNewTeacherEmail('');
+    setSchoolQuery('');
+    setSelectedSchool(null);
     setGradeLow('06');
     setGradeHigh('08');
     setSubject('');
@@ -67,25 +84,43 @@ export function AssignTeacherDialog({ schools, onAssign }: AssignTeacherDialogPr
     if (!next) reset();
   };
 
-  const canSubmit = teacherProfileId && schoolId && bandValid;
+  const pickSchool = (s: OhioSchool) => {
+    setSelectedSchool(s);
+    if (s.low_grade) setGradeLow(s.low_grade);
+    if (s.high_grade) setGradeHigh(s.high_grade);
+  };
+
+  const handleAddTeacher = async () => {
+    if (!newTeacherName.trim()) return;
+    const t = await onAddTeacher({ full_name: newTeacherName.trim(), email: newTeacherEmail.trim() || null });
+    if (t) {
+      setTeacherId(t.id);
+      setAddingTeacher(false);
+      setNewTeacherName('');
+      setNewTeacherEmail('');
+    }
+  };
+
+  const canSubmit = teacherId && selectedSchool && bandValid;
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedSchool) return;
     setSaving(true);
     try {
-      const snapshot = selectedSchool.ohio_schools
-        ? buildSnapshot(selectedSchool.ohio_schools, gradeLow, gradeHigh, servedNum)
-        : buildSnapshotEmpty(gradeLow, gradeHigh, servedNum);
-
+      const school = await onResolveSchool(selectedSchool);
+      if (!school) {
+        setSaving(false);
+        return;
+      }
       await onAssign({
-        teacher_id: teacherProfileId,
-        school_id: schoolId,
+        teacher_id: teacherId,
+        school_id: school.id,
         grade_low: gradeLow,
         grade_high: gradeHigh,
         subject: subject.trim() || null,
         students_served: servedNum,
-        school_year: selectedSchool.ohio_schools?.school_year ?? null,
-        demographics_snapshot: snapshot,
+        school_year: selectedSchool.school_year,
+        demographics_snapshot: buildSnapshot(selectedSchool, gradeLow, gradeHigh, servedNum),
       });
       handleOpenChange(false);
     } finally {
@@ -108,45 +143,129 @@ export function AssignTeacherDialog({ schools, onAssign }: AssignTeacherDialogPr
             Assign Teacher to a School
           </DialogTitle>
           <DialogDescription>
-            Pick the grade band you serve — demographics are pulled from the school's Ohio Report
-            Card and frozen on this assignment.
+            Pick a teacher and an Ohio school + grade band — demographics are pulled from the Ohio
+            Report Card and frozen on this assignment.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          {/* Teacher */}
           <div className="space-y-2">
-            <Label>Teacher</Label>
-            <UserSelect
-              users={users}
-              value={teacherUserId}
-              onValueChange={(userId) => setTeacherUserId(userId)}
-              placeholder="Select a teacher"
-            />
+            <div className="flex items-center justify-between">
+              <Label>Teacher</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => setAddingTeacher((v) => !v)}
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                {addingTeacher ? 'Cancel' : 'Add new teacher'}
+              </Button>
+            </div>
+            {addingTeacher ? (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Full name"
+                  value={newTeacherName}
+                  onChange={(e) => setNewTeacherName(e.target.value)}
+                />
+                <Input
+                  placeholder="Email (optional)"
+                  value={newTeacherEmail}
+                  onChange={(e) => setNewTeacherEmail(e.target.value)}
+                />
+                <Button type="button" onClick={handleAddTeacher} disabled={!newTeacherName.trim()}>
+                  Add
+                </Button>
+              </div>
+            ) : (
+              <Select value={teacherId} onValueChange={setTeacherId}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Select a teacher" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {teachers.length === 0 ? (
+                    <div className="py-2 px-3 text-sm text-muted-foreground">
+                      No teachers yet — add one
+                    </div>
+                  ) : (
+                    teachers.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.full_name}
+                        {t.email ? <span className="text-muted-foreground"> · {t.email}</span> : ''}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
+          {/* School (Ohio search) */}
           <div className="space-y-2">
             <Label>School</Label>
-            <Select value={schoolId} onValueChange={setSchoolId}>
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Select a partner school" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border z-50">
-                {schools.length === 0 ? (
-                  <div className="py-2 px-3 text-sm text-muted-foreground">
-                    Add a school first
+            {selectedSchool ? (
+              <div className="border rounded-lg p-2.5 flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Check className="h-4 w-4 text-available shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{selectedSchool.building_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[selectedSchool.district_name, selectedSchool.city].filter(Boolean).join(' · ')}
+                      {` · IRN ${selectedSchool.irn}`}
+                    </p>
                   </div>
-                ) : (
-                  schools.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                      {!s.ohio_schools ? ' (no Ohio data)' : ''}
-                    </SelectItem>
-                  ))
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedSchool(null)}>
+                  Change
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    placeholder="Search Ohio schools by name, district, or IRN"
+                    value={schoolQuery}
+                    onChange={(e) => setSchoolQuery(e.target.value)}
+                  />
+                </div>
+                {schoolQuery.trim().length >= 2 && (
+                  <div className="border rounded-lg max-h-44 overflow-y-auto divide-y">
+                    {searching ? (
+                      <p className="p-3 text-sm text-muted-foreground">Searching…</p>
+                    ) : results.length === 0 ? (
+                      <p className="p-3 text-sm text-muted-foreground">No matches.</p>
+                    ) : (
+                      results.map((s) => (
+                        <button
+                          key={s.irn}
+                          type="button"
+                          onClick={() => pickSchool(s)}
+                          className="w-full text-left p-2.5 hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium text-sm">{s.building_name}</span>
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              IRN {s.irn}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {[s.district_name, s.city].filter(Boolean).join(' · ')}
+                          </p>
+                        </button>
+                      ))
+                    )}
+                  </div>
                 )}
-              </SelectContent>
-            </Select>
+              </>
+            )}
           </div>
 
+          {/* Grade band */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>From grade</Label>
@@ -207,12 +326,6 @@ export function AssignTeacherDialog({ schools, onAssign }: AssignTeacherDialogPr
           </div>
 
           {/* Live preview */}
-          {selectedSchool && !selectedSchool.ohio_schools && (
-            <p className="text-xs text-muted-foreground">
-              This school has no Ohio Report Card data, so only the headcount you enter will be
-              recorded (no demographic estimate).
-            </p>
-          )}
           {preview && (
             <div className="border rounded-lg p-3 bg-muted/30 space-y-2 text-sm">
               <div className="flex items-center gap-2 font-medium">
@@ -272,29 +385,4 @@ export function AssignTeacherDialog({ schools, onAssign }: AssignTeacherDialogPr
       </DialogContent>
     </Dialog>
   );
-}
-
-const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
-
-/** Snapshot for schools with no Ohio data: records reach/headcount, no demographic estimates. */
-function buildSnapshotEmpty(low: string, high: string, served: number | null): NewAssignment['demographics_snapshot'] {
-  const emptyCounts = {
-    base: 0,
-    economically_disadvantaged: null,
-    students_with_disabilities: null,
-    english_learners: null,
-    gifted: null,
-    race_ethnicity: {},
-  };
-  return {
-    school_irn: null,
-    school_year: null,
-    grade_low: low,
-    grade_high: high,
-    potential_reach: 0,
-    actual_served: served,
-    potential: emptyCounts,
-    actual: served != null ? { ...emptyCounts, base: served } : null,
-    estimated: true,
-  };
 }
