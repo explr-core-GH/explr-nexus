@@ -48,7 +48,7 @@ export function computeBandReach(school: OhioSchool, low: string, high: string):
 /** Apply the school's building-level percentages to an arbitrary base population. */
 export function applyDemographics(school: OhioSchool, base: number): DemographicCounts {
   const total = school.total_enrollment ?? 0;
-  const race = (school.race_ethnicity ?? {}) as Record<string, RaceEthnicityEntry>;
+  const race = (school.race_ethnicity ?? {}) as unknown as Record<string, RaceEthnicityEntry>;
 
   const raceCounts: Record<string, number> = {};
   for (const [group, entry] of Object.entries(race)) {

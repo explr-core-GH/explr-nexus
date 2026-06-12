@@ -21,7 +21,7 @@ interface Props {
 
 /** Whole-school demographic snapshot read straight from the Ohio Report Card row. */
 export function SchoolDemographicsSummary({ school }: Props) {
-  const race = (school.race_ethnicity ?? {}) as Record<string, RaceEthnicityEntry>;
+  const race = (school.race_ethnicity ?? {}) as unknown as Record<string, RaceEthnicityEntry>;
   const total = school.total_enrollment;
 
   const rows = [
