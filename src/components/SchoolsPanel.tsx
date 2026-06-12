@@ -36,7 +36,7 @@ import { useSelectableUsers } from '@/hooks/useSelectableUsers';
 
 export function SchoolsPanel() {
   const { schools, addSchool, findOrCreateByOhioIrn, deleteSchool } = usePartnerSchools();
-  const { assignments, addAssignment, updateAssignment, deleteAssignment } = useTeacherAssignments();
+  const { assignments, addAssignment, updateAssignment, reassignYear, deleteAssignment } = useTeacherAssignments();
   const { teachers, addTeacher, findOrCreateForProfile, deleteTeacher } = useTeachers();
   const { organizations, deleteOrganization } = useOrganizations();
   const { users } = useSelectableUsers();
@@ -355,6 +355,7 @@ export function SchoolsPanel() {
         onDeleteAssignment={deleteAssignment}
         onUpdateAssignment={updateAssignment}
         onResolveSchool={findOrCreateByOhioIrn}
+        onReassignYear={reassignYear}
       />
     </div>
   );

@@ -151,6 +151,46 @@ export function useTeacherAssignments() {
     }
   };
 
+  /** Bulk re-tag every assignment with `fromYear` to `toYear`. Returns the count changed. */
+  const reassignYear = async (fromYear: string, toYear: string): Promise<number> => {
+    if (!isAdmin) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins can change years',
+        variant: 'destructive',
+      });
+      return 0;
+    }
+    try {
+      const { error } = await supabase
+        .from('teacher_school_assignments')
+        .update({ school_year: toYear })
+        .eq('school_year', fromYear);
+      if (error) throw error;
+
+      let count = 0;
+      setAssignments((prev) =>
+        prev.map((a) => {
+          if (a.school_year === fromYear) {
+            count++;
+            return { ...a, school_year: toYear };
+          }
+          return a;
+        })
+      );
+      toast({ title: `Moved to ${toYear}`, description: `${count} assignment${count !== 1 ? 's' : ''} updated` });
+      return count;
+    } catch (error: any) {
+      console.error('Error reassigning year:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to change year',
+        variant: 'destructive',
+      });
+      return 0;
+    }
+  };
+
   const deleteAssignment = async (id: string) => {
     if (!isAdmin) {
       toast({
@@ -181,5 +221,13 @@ export function useTeacherAssignments() {
     }
   };
 
-  return { assignments, isLoading, addAssignment, updateAssignment, deleteAssignment, refetch: fetchAssignments };
+  return {
+    assignments,
+    isLoading,
+    addAssignment,
+    updateAssignment,
+    reassignYear,
+    deleteAssignment,
+    refetch: fetchAssignments,
+  };
 }

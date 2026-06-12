@@ -33,9 +33,17 @@ export function recentSchoolYears(now: Date = new Date(), back = 2, forward = 1)
   return years;
 }
 
-/** Merge known years with any years already present in the data, most-recent first. */
+/**
+ * Merge known years with any years already present in the data, most-recent first.
+ * Existing values are normalized (e.g. "2025" -> "2025-2026") and only well-formed
+ * academic years are kept, so malformed/bare years never appear as options.
+ */
 export function schoolYearOptions(existing: (string | null | undefined)[] = []): string[] {
   const set = new Set<string>(recentSchoolYears());
-  for (const y of existing) if (y) set.add(y);
+  for (const y of existing) {
+    if (!y) continue;
+    const norm = normalizeSchoolYear(y);
+    if (/^\d{4}-\d{4}$/.test(norm)) set.add(norm);
+  }
   return [...set].sort().reverse();
 }

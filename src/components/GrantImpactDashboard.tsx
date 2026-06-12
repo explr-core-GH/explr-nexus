@@ -33,6 +33,7 @@ import type { DemographicCounts } from '@/lib/schoolDemographics';
 import { GRADE_LABELS } from '@/lib/grades';
 import { schoolYearOptions } from '@/lib/schoolYears';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
+import { ChangeYearDialog } from '@/components/ChangeYearDialog';
 
 const RACE_LABELS: Record<string, string> = {
   white: 'White',
@@ -80,6 +81,7 @@ interface Props {
   onDeleteAssignment: (id: string) => Promise<boolean>;
   onUpdateAssignment: (id: string, input: Omit<NewAssignment, 'teacher_id'>) => Promise<unknown>;
   onResolveSchool: (ohio: OhioSchool) => Promise<PartnerSchool | null>;
+  onReassignYear: (fromYear: string, toYear: string) => Promise<number>;
 }
 
 export function GrantImpactDashboard({
@@ -87,6 +89,7 @@ export function GrantImpactDashboard({
   onDeleteAssignment,
   onUpdateAssignment,
   onResolveSchool,
+  onReassignYear,
 }: Props) {
   const [mode, setMode] = useState<Mode>('potential');
   const [yearFilter, setYearFilter] = useState<string>('all');
@@ -244,6 +247,8 @@ export function GrantImpactDashboard({
               ))}
             </SelectContent>
           </Select>
+
+          <ChangeYearDialog assignments={assignments} onReassign={onReassignYear} />
 
           {/* Potential / Actual toggle */}
           <div className="inline-flex rounded-lg border p-0.5">
