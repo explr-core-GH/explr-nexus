@@ -87,7 +87,7 @@ const Landing = () => {
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <img src={logo} alt="Nexus" className="h-16 w-auto" />
+            <Link to="/" aria-label="Nexus home"><img src={logo} alt="Nexus" className="h-16 w-auto" /></Link>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
