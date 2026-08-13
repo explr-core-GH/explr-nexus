@@ -119,16 +119,17 @@ const Landing = () => {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-sm font-medium mb-6">
               <Package className="h-4 w-4" />
-              Equipment Lending Library
+              A Cleveland State University + MAGNET partnership
             </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground">
               Hands-on learning,<br />
               <span className="text-accent">shared and tracked.</span>
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground">
-              ExplrNexus is the platform that powers our equipment lending library —
-              letting educators and organizations borrow STEM kits, manipulatives,
-              and teaching materials, and capturing the student impact for grants.
+              Nexus is the equipment lending library behind EXPLR — letting
+              Northeast Ohio educators and organizations borrow STEM kits,
+              robotics gear, and teaching materials, and capturing the student
+              impact that makes the case to funders.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button size="lg" asChild className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -156,15 +157,39 @@ const Landing = () => {
 
       {/* Who we are */}
       <section className="container py-16">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-foreground">Who we are</h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            We are an educational nonprofit dedicated to expanding access to
-            high-quality, hands-on learning materials. Our equipment lending
-            library lets schools, teachers, and community organizations share
-            expensive kits and resources that no single classroom could afford
-            on its own — and we track every loan so the impact is visible.
-          </p>
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-foreground">Who we are</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Nexus is part of EXPLR, a partnership between{' '}
+              <span className="text-foreground font-medium">Cleveland State University</span>{' '}
+              and <span className="text-foreground font-medium">MAGNET</span>, the
+              Manufacturing Advocacy &amp; Growth Network. Together we inspire the
+              next generation through hands-on STEM education, mentorship, and
+              career exploration — K-12 robotics teams, STEMways and Pathways
+              programming, summer camps, and paid high school internships across
+              Cleveland.
+            </p>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Great hands-on learning takes equipment that no single classroom can
+              afford alone. Nexus is how we share it: one lending library of kits,
+              robotics parts, and materials that any partner educator or
+              organization can borrow — with every loan tracked so the student
+              impact is visible.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {[
+              { label: 'Lead. Learn. Experience.', body: 'Authentic, work-based learning that builds skills and confidence.' },
+              { label: 'K-12 Robotics', body: 'FIRST Robotics teams practicing problem solving through competition.' },
+              { label: 'Camps & Internships', body: 'Summer STEM camps for middle school and paid internships for high schoolers.' },
+            ].map((c) => (
+              <div key={c.label} className="bg-card rounded-xl border border-border p-6 text-center">
+                <h3 className="font-semibold text-foreground mb-2">{c.label}</h3>
+                <p className="text-sm text-muted-foreground">{c.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
