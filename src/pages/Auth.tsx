@@ -112,7 +112,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/inventory`,
             data: {
               full_name: fullName,
               organization_name: organizationName,
