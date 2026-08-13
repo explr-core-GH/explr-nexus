@@ -315,7 +315,7 @@ const Index = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-pulse-soft">
-            <img src={logo} alt="ExplrNexus" className="h-24 w-auto mx-auto opacity-70" />
+            <img src={logo} alt="Nexus" className="h-24 w-auto mx-auto opacity-70" />
           </div>
           <p className="mt-4 text-muted-foreground">Loading inventory...</p>
         </div>
@@ -330,7 +330,7 @@ const Index = () => {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
+              <img src={logo} alt="Nexus" className="h-16 w-auto" />
             </div>
             <div className="flex items-center gap-2">
               <InstallPWAButton />

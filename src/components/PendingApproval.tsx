@@ -19,7 +19,7 @@ export function PendingApproval() {
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
+            <img src={logo} alt="Nexus" className="h-16 w-auto" />
             <Button 
               variant="ghost" 
               size="sm" 

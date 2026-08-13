@@ -198,7 +198,7 @@ const Resources = () => {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
+              <img src={logo} alt="Nexus" className="h-16 w-auto" />
             </div>
             <div className="flex items-center gap-2">
               <Button 
