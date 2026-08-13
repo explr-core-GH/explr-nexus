@@ -59,7 +59,7 @@ export default function Install() {
             </div>
             <CardTitle>App Installed!</CardTitle>
             <CardDescription>
-              ExplrNexus is installed on your device. You can now access it from your home screen.
+              Nexus is installed on your device. You can now access it from your home screen.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -77,9 +77,9 @@ export default function Install() {
       <Card className="max-w-md w-full">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
-            <img src={logo} alt="ExplrNexus" className="h-20 w-auto mx-auto" />
+            <img src={logo} alt="Nexus" className="h-20 w-auto mx-auto" />
           </div>
-          <CardTitle className="text-2xl">Install ExplrNexus</CardTitle>
+          <CardTitle className="text-2xl">Install Nexus</CardTitle>
           <CardDescription>
             Install the app on your device for the best experience with offline access and quick launching.
           </CardDescription>

@@ -215,7 +215,7 @@ const Auth = () => {
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
         <div className="container py-4">
           <div className="flex items-center justify-center">
-            <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
+            <img src={logo} alt="Nexus" className="h-16 w-auto" />
           </div>
         </div>
       </header>
@@ -230,8 +230,8 @@ const Auth = () => {
               </h2>
               <p className="text-muted-foreground mt-2">
                 {isLogin
-                  ? 'Sign in to access the ExplrNexus inventory'
-                  : 'Sign up to start managing your gear with ExplrNexus'}
+                  ? 'Sign in to access the Nexus inventory'
+                  : 'Sign up to start managing your gear with Nexus'}
               </p>
             </div>
 
