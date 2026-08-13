@@ -63,7 +63,7 @@ export default function Install() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = '/'} className="w-full">
+            <Button onClick={() => window.location.href = '/inventory'} className="w-full">
               Open App
             </Button>
           </CardContent>
@@ -139,7 +139,7 @@ export default function Install() {
           )}
 
           <div className="text-center">
-            <Button variant="link" onClick={() => window.location.href = '/'}>
+            <Button variant="link" onClick={() => window.location.href = '/inventory'}>
               Continue in browser
             </Button>
           </div>

@@ -39,7 +39,7 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate('/');
+        navigate('/inventory');
       }
     });
   }, [navigate]);
@@ -106,13 +106,13 @@ const Auth = () => {
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
         });
-        navigate('/');
+        navigate('/inventory');
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/inventory`,
             data: {
               full_name: fullName,
               organization_name: organizationName,
@@ -173,7 +173,7 @@ const Auth = () => {
                   title: 'Account created!',
                   description: `Welcome! You've been granted ${roleData.role} access.`,
                 });
-                navigate('/');
+                navigate('/inventory');
                 return;
               }
             } catch (fnError) {
@@ -188,7 +188,7 @@ const Auth = () => {
             ? 'Your account is pending admin approval.' 
             : 'Your account is pending admin approval. You can log in but will have limited access until approved.',
         });
-        navigate('/');
+        navigate('/inventory');
       }
     } catch (error: any) {
       let message = error.message || 'An error occurred';

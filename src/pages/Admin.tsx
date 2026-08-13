@@ -166,7 +166,7 @@ const Admin = () => {
 
   // Redirect non-admins (moved after all hooks)
   if (!authLoading && !isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/inventory" replace />;
   }
 
   if (isLoading) {
@@ -196,7 +196,7 @@ const Admin = () => {
                 asChild
                 className="text-primary-foreground hover:bg-primary-foreground/10"
               >
-                <Link to="/">
+                <Link to="/inventory">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Inventory
                 </Link>

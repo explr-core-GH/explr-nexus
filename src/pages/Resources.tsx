@@ -207,7 +207,7 @@ const Resources = () => {
                 asChild
                 className="text-primary-foreground hover:bg-primary-foreground/10"
               >
-                <Link to="/">
+                <Link to="/inventory">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Inventory
                 </Link>
