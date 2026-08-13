@@ -87,7 +87,7 @@ const Landing = () => {
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <img src={logo} alt="ExplrNexus" className="h-16 w-auto" />
+            <img src={logo} alt="Nexus" className="h-16 w-auto" />
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -201,7 +201,7 @@ const Landing = () => {
               How the lending library works
             </h2>
             <p className="mt-4 text-muted-foreground">
-              From request to return, ExplrNexus makes borrowing equipment simple
+              From request to return, Nexus makes borrowing equipment simple
               — and turns every loan into measurable student impact.
             </p>
           </div>
@@ -228,7 +228,7 @@ const Landing = () => {
       {/* What we do / Features */}
       <section className="container py-16">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-bold text-foreground">What ExplrNexus does</h2>
+          <h2 className="text-3xl font-bold text-foreground">What Nexus does</h2>
           <p className="mt-4 text-muted-foreground">
             More than a sign-out sheet — a complete system for managing shared
             educational equipment and proving your program’s reach.
@@ -332,11 +332,11 @@ const Landing = () => {
       <footer className="border-t border-border">
         <div className="container py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="ExplrNexus" className="h-8 w-auto" />
-            <span className="text-sm text-muted-foreground">ExplrNexus</span>
+            <img src={logo} alt="Nexus" className="h-8 w-auto" />
+            <span className="text-sm text-muted-foreground">Nexus</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ExplrNexus. Equipment lending library for educators.
+            © {new Date().getFullYear()} EXPLR Nexus — a Cleveland State University & MAGNET partnership.
           </p>
         </div>
       </footer>
