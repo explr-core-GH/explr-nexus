@@ -68,7 +68,7 @@ const features = [
     icon: Smartphone,
     title: 'Works on Any Device',
     description:
-      'Installable as an app on phones and tablets so staff can scan and manage equipment in the field, offline-friendly.',
+      'Installable as an app on phones and tablets so staff can scan and manage equipment anywhere, always in sync with live data.',
   },
 ];
 
