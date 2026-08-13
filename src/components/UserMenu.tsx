@@ -17,7 +17,7 @@ export function UserMenu() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/');
   };
 
   return (

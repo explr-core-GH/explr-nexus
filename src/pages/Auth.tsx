@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Loader2, Building2, Briefcase, KeyRound, GraduationCap, Heart } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -215,7 +215,7 @@ const Auth = () => {
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
         <div className="container py-4">
           <div className="flex items-center justify-center">
-            <img src={logo} alt="Nexus" className="h-16 w-auto" />
+            <Link to="/" aria-label="Nexus home"><img src={logo} alt="Nexus" className="h-16 w-auto" /></Link>
           </div>
         </div>
       </header>

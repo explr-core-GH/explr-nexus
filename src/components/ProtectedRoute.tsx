@@ -19,7 +19,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Show pending approval screen if user has no role assigned
