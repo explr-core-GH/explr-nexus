@@ -77,9 +77,9 @@
     --popover: 222 22% 12%;
     --popover-foreground: 0 0% 95%;
 
-    /* Primary - Neon Green */
-    --primary: 142 76% 50%;
-    --primary-foreground: 222 25% 8%;
+    /* Primary - Black */
+    --primary: 222 25% 6%;
+    --primary-foreground: 0 0% 98%;
 
     /* Secondary - Slightly lighter blue-grey */
     --secondary: 222 20% 18%;
