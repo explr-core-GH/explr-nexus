@@ -73,12 +73,21 @@ export function ItemDetailDialog({
   canCheckInOut = true,
   bundles = [],
   items = [],
+  onRecordMissingContents,
 }: ItemDetailDialogProps) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedUserName, setSelectedUserName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [contentsChecked, setContentsChecked] = useState<boolean[]>([]);
   const { userRole } = useAuth();
   const isMember = userRole === 'member';
+
+  const itemContents = item?.contents ?? [];
+
+  useEffect(() => {
+    setContentsChecked(itemContents.map(() => false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, itemContents.length]);
 
   if (!item) return null;
 
