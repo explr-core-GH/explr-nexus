@@ -4,7 +4,9 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface ItemRequest {
   id: string;
-  itemId: string;
+  itemId: string | null;
+  projectId: string | null;
+  projectName: string | null;
   itemName: string;
   requesterId: string;
   requesterName: string;
@@ -53,6 +55,8 @@ export function useItemRequests() {
       const mapped: ItemRequest[] = (data || []).map((r: any) => ({
         id: r.id,
         itemId: r.item_id,
+        projectId: r.project_id ?? null,
+        projectName: r.project_name ?? null,
         itemName: r.item_name,
         requesterId: r.requester_id,
         requesterName: r.requester_name,
@@ -144,6 +148,92 @@ export function useItemRequests() {
     }
   };
 
+  /**
+   * Creates a single request covering every material in a project and places a
+   * reserved hold on each item/quantity until the request is approved or closed.
+   */
+  const createProjectRequest = async (
+    project: { id: string; name: string },
+    lines: { itemId: string; itemName: string; quantity: number }[],
+    requesterName: string,
+    requesterEmail: string | null,
+    requesterOrganization: string | null,
+    message?: string,
+    preferredDates?: Date[],
+    demographics?: RequestDemographics,
+    returnDueDate?: Date | null
+  ): Promise<boolean> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const insertPayload: any = {
+        item_id: null,
+        item_name: project.name,
+        project_id: project.id,
+        project_name: project.name,
+        requester_id: user.id,
+        requester_name: requesterName,
+        requester_email: requesterEmail,
+        requester_organization: requesterOrganization,
+        message: message || null,
+        preferred_dates: preferredDates?.map(d => d.toISOString()) || [],
+      };
+
+      if (demographics) {
+        insertPayload.free_reduced_lunch = demographics.freeReducedLunch;
+        insertPayload.special_groups = demographics.specialGroups;
+        insertPayload.number_of_students = demographics.numberOfStudents;
+        insertPayload.usage_hours = demographics.usageHours;
+        insertPayload.usage_days = demographics.usageDays;
+      }
+
+      if (returnDueDate) {
+        insertPayload.return_due_date = returnDueDate.toISOString();
+      }
+
+      const { data: created, error } = await supabase
+        .from('item_requests')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      if (lines.length > 0) {
+        const { error: reservationError } = await supabase.from('item_reservations').insert(
+          lines.map(l => ({
+            request_id: created.id,
+            project_id: project.id,
+            item_id: l.itemId,
+            item_name: l.itemName,
+            quantity: l.quantity,
+            reserved_by: user.id,
+          }))
+        );
+        if (reservationError) throw reservationError;
+      }
+
+      toast({
+        title: 'Project Requested',
+        description: `${lines.length} item${lines.length === 1 ? '' : 's'} are now reserved while an admin reviews your request.`,
+      });
+
+      await fetchRequests();
+      return true;
+    } catch (error: any) {
+      console.error('Error creating project request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send the project request. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+
+
   const updateRequest = async (
     requestId: string,
     status: 'approved' | 'denied' | 'pending_confirmation' | 'pending',
@@ -179,6 +269,15 @@ export function useItemRequests() {
         pending_confirmation: { title: 'Date Proposed', description: 'A new date has been proposed to the requester.' },
         pending: { title: 'Request Updated', description: 'The request has been updated.' },
       };
+
+      // A declined request releases any reserved holds back into availability.
+      if (status === 'denied') {
+        await supabase
+          .from('item_reservations')
+          .update({ status: 'released' })
+          .eq('request_id', requestId)
+          .eq('status', 'reserved');
+      }
 
       toast(statusMessages[status]);
 
@@ -321,6 +420,7 @@ export function useItemRequests() {
     loading,
     pendingCount,
     createRequest,
+    createProjectRequest,
     updateRequest,
     updateDemographics,
     deleteRequest,
