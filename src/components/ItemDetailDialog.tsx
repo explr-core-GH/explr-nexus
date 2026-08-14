@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil, Layers, ClipboardCheck, AlertTriangle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
