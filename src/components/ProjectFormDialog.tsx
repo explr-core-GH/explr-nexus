@@ -175,23 +175,15 @@ export function ProjectFormDialog({ open, onOpenChange, project, items, onSubmit
             )}
             {materials.map((row, index) => (
               <div key={index} className="flex items-center gap-2">
-                <Select
+                <InventoryItemCombobox
+                  items={sortedItems}
                   value={row.itemId}
-                  onValueChange={value =>
+                  disabledIds={materials.map(m => m.itemId).filter(Boolean)}
+                  className="flex-1 min-w-0"
+                  onChange={value =>
                     setMaterials(prev => prev.map((m, i) => (i === index ? { ...m, itemId: value } : m)))
                   }
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select an item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedItems.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 <Input
                   type="number"
                   min={1}
