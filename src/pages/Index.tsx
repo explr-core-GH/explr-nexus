@@ -128,8 +128,16 @@ const Index = () => {
       const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
       
       return matchesSearch && matchesStatus && matchesRequested && matchesCategory;
+    }).sort((a, b) => {
+      if (sortBy === 'newest') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortBy === 'quantity') {
+        return (b.quantity ?? 0) - (a.quantity ?? 0);
+      }
+      return a.name.localeCompare(b.name);
     });
-  }, [items, searchQuery, statusFilter, categoryFilter, userRole, userTags, requestedItemIds]);
+  }, [items, searchQuery, statusFilter, categoryFilter, sortBy, userRole, userTags, requestedItemIds]);
 
   const handleItemClick = (item: InventoryItem) => {
     setSelectedItem(item);
