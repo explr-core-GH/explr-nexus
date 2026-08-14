@@ -743,11 +743,7 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
-      const typedData: InventoryItem[] = (data || []).map(item => ({
-        ...item,
-        status: item.status as 'available' | 'checked-out' | 'maintenance',
-        checked_out_by_name: null
-      }));
+      const typedData: InventoryItem[] = (data || []).map(item => normalizeItem(item));
 
       setItems(prev => [...typedData, ...prev]);
       return typedData;
