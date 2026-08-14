@@ -8,9 +8,9 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, userRole, isLoading } = useAuth();
+  const { user, userRole, isLoading, roleLoading } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || (user && roleLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -22,7 +22,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  // Show pending approval screen if user has no role assigned
+  // Only shown once the role fetch has actually resolved and returned no role
   if (!userRole) {
     return <PendingApproval />;
   }
