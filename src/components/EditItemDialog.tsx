@@ -24,6 +24,8 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { LocationSelect } from '@/components/LocationSelect';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
+import { ItemTagsSelect } from '@/components/ItemTagsSelect';
+import { ItemContentsEditor, ItemContentLine } from '@/components/ItemContentsEditor';
 import { Location } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/useCategories';
@@ -38,10 +40,13 @@ interface EditItemDialogProps {
     locationId?: string;
     imageUrl?: string;
     tags?: string[];
+    itemTags?: string[];
     status?: string;
     checkedOutBy?: string;
     isConsumable?: boolean;
     quantity?: number;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   };
   locations?: Location[];
   users?: SelectableUser[];
@@ -53,9 +58,12 @@ interface EditItemDialogProps {
     location_id: string | null;
     image_url: string | null;
     tags?: string[];
+    item_tags?: string[];
     checked_out_by?: string | null;
     is_consumable?: boolean;
     quantity?: number;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   }) => Promise<boolean>;
   trigger?: React.ReactNode;
 }
@@ -69,9 +77,12 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
   const [locationId, setLocationId] = useState<string | undefined>(item.locationId);
   const [imageUrl, setImageUrl] = useState<string | null>(item.imageUrl || null);
   const [tags, setTags] = useState<string[]>(item.tags || []);
+  const [itemTags, setItemTags] = useState<string[]>(item.itemTags || []);
   const [assignedToName, setAssignedToName] = useState<string>(item.checkedOutBy || '');
   const [isConsumable, setIsConsumable] = useState(item.isConsumable ?? false);
   const [quantity, setQuantity] = useState<number>(item.quantity ?? 1);
+  const [cost, setCost] = useState<string>(item.cost != null ? String(item.cost) : '');
+  const [contents, setContents] = useState<ItemContentLine[]>(item.contents || []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -85,9 +96,12 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
     setLocationId(item.locationId);
     setImageUrl(item.imageUrl || null);
     setTags(item.tags || []);
+    setItemTags(item.itemTags || []);
     setAssignedToName(item.checkedOutBy || '');
     setIsConsumable(item.isConsumable ?? false);
     setQuantity(item.quantity ?? 1);
+    setCost(item.cost != null ? String(item.cost) : '');
+    setContents(item.contents || []);
   }, [item]);
 
   const handleLocationChange = (locId: string) => {
