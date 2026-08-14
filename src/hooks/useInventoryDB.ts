@@ -252,6 +252,33 @@ export function useInventoryDB() {
     }
   };
 
+  const recordMissingContents = async (id: string, missing: MissingContentLine[]) => {
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({ missing_contents: missing as any })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, missing_contents: missing } : item))
+      );
+
+      if (missing.length > 0) {
+        toast({
+          title: 'Missing Contents Recorded',
+          description: `${missing.length} content line(s) were not confirmed on check-in`,
+          variant: 'destructive',
+        });
+      }
+      return true;
+    } catch (error: any) {
+      console.error('Error recording missing contents:', error);
+      return false;
+    }
+  };
+
   const deleteItem = async (id: string) => {
     if (!isAdmin) {
       toast({
