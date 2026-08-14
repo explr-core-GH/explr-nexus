@@ -149,7 +149,11 @@ export function ItemDetailDialog({
         
         await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds, selectedUserId || undefined);
       } else if (item.status === 'checked-out') {
-        await onCheckIn(item.id, selectedUserName.trim());
+        const success = await onCheckIn(item.id, selectedUserName.trim());
+        if (success && itemContents.length > 0 && onRecordMissingContents) {
+          const missing = itemContents.filter((_, i) => !contentsChecked[i]);
+          await onRecordMissingContents(item.id, missing);
+        }
       }
       setSelectedUserId('');
       setSelectedUserName('');
