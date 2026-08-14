@@ -301,14 +301,25 @@ export function ScanResultDialog({
           </Button>
         )}
         {item.status === 'checked-out' && (
-          <Button 
-            onClick={() => handleAction('check-in')} 
-            disabled={isLoading || !selectedUserName}
-            className="w-full gap-2"
-          >
-            <LogIn className="h-4 w-4" />
-            Check In
-          </Button>
+          <>
+            {itemContents.length > 0 && (
+              <ContentsChecklist
+                contents={itemContents}
+                checked={contentsChecked}
+                onToggle={(index, value) =>
+                  setContentsChecked(prev => prev.map((c, i) => (i === index ? value : c)))
+                }
+              />
+            )}
+            <Button 
+              onClick={() => handleAction('check-in')} 
+              disabled={isLoading || !selectedUserName}
+              className="w-full gap-2"
+            >
+              <LogIn className="h-4 w-4" />
+              Check In
+            </Button>
+          </>
         )}
         {isAdmin && item.status === 'available' && (
           <Button 
