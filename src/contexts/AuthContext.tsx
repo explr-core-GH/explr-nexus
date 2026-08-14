@@ -132,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error in fetchProfileAndRole:', error);
     } finally {
       setIsLoading(false);
+      setRoleLoading(false);
     }
   };
 
@@ -144,10 +145,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCanCheckInOut(false);
     setUserRole(null);
     setUserTags([]);
+    setRoleLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, userTags, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, userTags, isLoading, roleLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
