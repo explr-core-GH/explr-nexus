@@ -358,6 +358,15 @@ export function ItemDetailDialog({
                   {item.status === 'available' ? 'Check Out' : 'Check In'}
                 </Button>
               </div>
+              {item.status === 'checked-out' && itemContents.length > 0 && (
+                <ContentsChecklist
+                  contents={itemContents}
+                  checked={contentsChecked}
+                  onToggle={(index, value) =>
+                    setContentsChecked(prev => prev.map((c, i) => (i === index ? value : c)))
+                  }
+                />
+              )}
             </div>
           )}
 
