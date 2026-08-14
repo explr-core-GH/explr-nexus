@@ -24,7 +24,7 @@ import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { EditItemDialog } from '@/components/EditItemDialog';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { RequestItemButton } from '@/components/RequestItemButton';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem, ItemContentLine } from '@/types/inventory';
 import { Location } from '@/hooks/useLocations';
 import { BundleWithItems } from '@/hooks/useBundles';
 import { InventoryItem as DBInventoryItem } from '@/hooks/useInventoryDB';
@@ -56,6 +56,7 @@ interface ItemDetailDialogProps {
   canCheckInOut?: boolean;
   bundles?: BundleWithItems[];
   items?: DBInventoryItem[];
+  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => Promise<void> | void;
 }
 
 export function ItemDetailDialog({
