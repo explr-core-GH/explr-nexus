@@ -231,14 +231,25 @@ export function ScanResultDialog({
         );
       }
       return (
-        <Button 
-          onClick={() => handleAction('check-in')} 
-          disabled={isLoading || !selectedUserName}
-          className="w-full gap-2 bg-available hover:bg-available/90"
-        >
-          <LogIn className="h-4 w-4" />
-          Check In Now
-        </Button>
+        <div className="space-y-3">
+          {itemContents.length > 0 && (
+            <ContentsChecklist
+              contents={itemContents}
+              checked={contentsChecked}
+              onToggle={(index, value) =>
+                setContentsChecked(prev => prev.map((c, i) => (i === index ? value : c)))
+              }
+            />
+          )}
+          <Button 
+            onClick={() => handleAction('check-in')} 
+            disabled={isLoading || !selectedUserName}
+            className="w-full gap-2 bg-available hover:bg-available/90"
+          >
+            <LogIn className="h-4 w-4" />
+            Check In Now
+          </Button>
+        </div>
       );
     }
 
