@@ -22,6 +22,7 @@ interface AuthContextType {
   userRole: AppRole | null;
   userTags: string[]; // visibility tags for the current user
   isLoading: boolean;
+  roleLoading: boolean; // true until the role fetch for the current session resolves
   signOut: () => Promise<void>;
 }
 
