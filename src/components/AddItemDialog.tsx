@@ -188,6 +188,13 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
             </p>
             <TagsCheckboxGroup selectedTags={tags} onTagsChange={setTags} />
           </div>
+          <div className="space-y-2">
+            <Label>Item Tags</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Keywords that make this item easier to find
+            </p>
+            <ItemTagsSelect selectedTags={itemTags} onTagsChange={setItemTags} />
+          </div>
           {/* Quantity */}
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity</Label>
@@ -199,6 +206,27 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
               placeholder="1"
             />
+          </div>
+          {/* Cost */}
+          <div className="space-y-2">
+            <Label htmlFor="cost">Cost (USD)</Label>
+            <Input
+              id="cost"
+              type="number"
+              min="0"
+              step="0.01"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="Optional, e.g., 149.99"
+            />
+          </div>
+          {/* Item contents */}
+          <div className="space-y-2">
+            <Label>Item Contents</Label>
+            <p className="text-xs text-muted-foreground">
+              Optional checklist of what is inside this item. Contents must be verified on check-in.
+            </p>
+            <ItemContentsEditor contents={contents} onChange={setContents} />
           </div>
           {/* Consumable checkbox */}
           <div className="flex items-center space-x-2">
