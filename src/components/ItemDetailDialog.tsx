@@ -57,7 +57,7 @@ interface ItemDetailDialogProps {
   canCheckInOut?: boolean;
   bundles?: BundleWithItems[];
   items?: DBInventoryItem[];
-  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => Promise<void> | void;
+  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => unknown;
 }
 
 export function ItemDetailDialog({

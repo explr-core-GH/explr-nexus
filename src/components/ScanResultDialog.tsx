@@ -29,7 +29,7 @@ interface ScanResultDialogProps {
   onCheckIn: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
   onCheckOut: (itemId: string, userName: string, locationId?: string, bundleItemIds?: string[], selectedUserId?: string) => Promise<boolean> | boolean;
   onMaintenance?: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
-  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => Promise<void> | void;
+  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => unknown;
   isAdmin?: boolean;
   canCheckInOut?: boolean;
 }
