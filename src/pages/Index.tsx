@@ -478,8 +478,22 @@ const Index = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name (A–Z)</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="quantity">Number (qty)</SelectItem>
+              </SelectContent>
+            </Select>
             {isAdmin && (
               <>
+                <PrintQRLabelsDialog
+                  items={items.map(i => ({ id: i.id, name: i.name, qr_code: i.qr_code, category: i.category }))}
+                  categories={categories}
+                />
                 <Button variant="outline" onClick={handleExportInventory} disabled={items.length === 0}>
                   <Download className="h-4 w-4" />
                   <span className="hidden sm:inline">Export Excel</span>
