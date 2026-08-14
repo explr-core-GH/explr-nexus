@@ -139,13 +139,17 @@ export type Database = {
           category: string
           checked_out_at: string | null
           checked_out_by: string | null
+          contents: Json
+          cost: number | null
           created_at: string
           description: string | null
           id: string
           image_url: string | null
           is_consumable: boolean | null
+          item_tags: string[]
           location: string
           location_id: string | null
+          missing_contents: Json
           name: string
           qr_code: string
           quantity: number | null
@@ -158,13 +162,17 @@ export type Database = {
           category: string
           checked_out_at?: string | null
           checked_out_by?: string | null
+          contents?: Json
+          cost?: number | null
           created_at?: string
           description?: string | null
           id?: string
           image_url?: string | null
           is_consumable?: boolean | null
+          item_tags?: string[]
           location: string
           location_id?: string | null
+          missing_contents?: Json
           name: string
           qr_code: string
           quantity?: number | null
@@ -177,13 +185,17 @@ export type Database = {
           category?: string
           checked_out_at?: string | null
           checked_out_by?: string | null
+          contents?: Json
+          cost?: number | null
           created_at?: string
           description?: string | null
           id?: string
           image_url?: string | null
           is_consumable?: boolean | null
+          item_tags?: string[]
           location?: string
           location_id?: string | null
+          missing_contents?: Json
           name?: string
           qr_code?: string
           quantity?: number | null
@@ -586,6 +598,27 @@ export type Database = {
           type?: string
           updated_at?: string
           url?: string | null
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, LogIn, LogOut, Wrench, MapPin, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,9 @@ import {
 import { LocationSelect } from '@/components/LocationSelect';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { RequestItemButton } from '@/components/RequestItemButton';
+import { ContentsChecklist } from '@/components/ContentsChecklist';
 import { Location } from '@/hooks/useLocations';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem, ItemContentLine } from '@/types/inventory';
 import { ScanMode } from '@/components/ScanButton';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +29,7 @@ interface ScanResultDialogProps {
   onCheckIn: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
   onCheckOut: (itemId: string, userName: string, locationId?: string, bundleItemIds?: string[], selectedUserId?: string) => Promise<boolean> | boolean;
   onMaintenance?: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
+  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => unknown;
   isAdmin?: boolean;
   canCheckInOut?: boolean;
 }
@@ -43,6 +45,7 @@ export function ScanResultDialog({
   onCheckIn,
   onCheckOut,
   onMaintenance,
+  onRecordMissingContents,
   isAdmin = false,
   canCheckInOut = true,
 }: ScanResultDialogProps) {
@@ -52,8 +55,16 @@ export function ScanResultDialog({
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [contentsChecked, setContentsChecked] = useState<boolean[]>([]);
   const { userRole } = useAuth();
   const isMember = userRole === 'member';
+
+  const itemContents = item?.contents ?? [];
+
+  useEffect(() => {
+    setContentsChecked(itemContents.map(() => false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, itemContents.length]);
 
   const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance' | 'return-from-maintenance') => {
     if (!item || !selectedUserName) return;
@@ -67,6 +78,10 @@ export function ScanResultDialog({
         success = await onCheckOut(item.id, selectedUserName, newLocationId, undefined, selectedUserId || undefined);
       } else if (action === 'check-in' || action === 'return-from-maintenance') {
         success = await onCheckIn(item.id, selectedUserName, newLocationId);
+        if (success && action === 'check-in' && itemContents.length > 0 && onRecordMissingContents) {
+          const missing = itemContents.filter((_, i) => !contentsChecked[i]);
+          await onRecordMissingContents(item.id, missing);
+        }
       } else if (action === 'maintenance' && onMaintenance) {
         success = await onMaintenance(item.id, selectedUserName, newLocationId);
       }
@@ -91,6 +106,7 @@ export function ScanResultDialog({
     setSelectedUserName('');
     setActionComplete(false);
     setLastAction(null);
+    setContentsChecked(itemContents.map(() => false));
     onOpenChange(false);
   };
 
@@ -215,14 +231,25 @@ export function ScanResultDialog({
         );
       }
       return (
-        <Button 
-          onClick={() => handleAction('check-in')} 
-          disabled={isLoading || !selectedUserName}
-          className="w-full gap-2 bg-available hover:bg-available/90"
-        >
-          <LogIn className="h-4 w-4" />
-          Check In Now
-        </Button>
+        <div className="space-y-3">
+          {itemContents.length > 0 && (
+            <ContentsChecklist
+              contents={itemContents}
+              checked={contentsChecked}
+              onToggle={(index, value) =>
+                setContentsChecked(prev => prev.map((c, i) => (i === index ? value : c)))
+              }
+            />
+          )}
+          <Button 
+            onClick={() => handleAction('check-in')} 
+            disabled={isLoading || !selectedUserName}
+            className="w-full gap-2 bg-available hover:bg-available/90"
+          >
+            <LogIn className="h-4 w-4" />
+            Check In Now
+          </Button>
+        </div>
       );
     }
 
@@ -274,14 +301,25 @@ export function ScanResultDialog({
           </Button>
         )}
         {item.status === 'checked-out' && (
-          <Button 
-            onClick={() => handleAction('check-in')} 
-            disabled={isLoading || !selectedUserName}
-            className="w-full gap-2"
-          >
-            <LogIn className="h-4 w-4" />
-            Check In
-          </Button>
+          <>
+            {itemContents.length > 0 && (
+              <ContentsChecklist
+                contents={itemContents}
+                checked={contentsChecked}
+                onToggle={(index, value) =>
+                  setContentsChecked(prev => prev.map((c, i) => (i === index ? value : c)))
+                }
+              />
+            )}
+            <Button 
+              onClick={() => handleAction('check-in')} 
+              disabled={isLoading || !selectedUserName}
+              className="w-full gap-2"
+            >
+              <LogIn className="h-4 w-4" />
+              Check In
+            </Button>
+          </>
         )}
         {isAdmin && item.status === 'available' && (
           <Button 

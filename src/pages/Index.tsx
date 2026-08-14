@@ -39,6 +39,8 @@ import { AdminNotifications } from '@/components/AdminNotifications';
 import { InstallPWAButton } from '@/components/InstallPWAButton';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { MyRequestsSheet } from '@/components/MyRequestsSheet';
+import { PrintQRLabelsDialog } from '@/components/PrintQRLabelsDialog';
+import { ItemContentLine } from '@/types/inventory';
 
 const Index = () => {
   const { 
@@ -52,6 +54,7 @@ const Index = () => {
     checkOut, 
     deleteItem, 
     setMaintenance,
+    recordMissingContents,
     findByQrCode, 
     getStats 
   } = useInventoryDB();
@@ -65,6 +68,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'newest' | 'quantity'>('name');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -124,8 +128,16 @@ const Index = () => {
       const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
       
       return matchesSearch && matchesStatus && matchesRequested && matchesCategory;
+    }).sort((a, b) => {
+      if (sortBy === 'newest') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortBy === 'quantity') {
+        return (b.quantity ?? 0) - (a.quantity ?? 0);
+      }
+      return a.name.localeCompare(b.name);
     });
-  }, [items, searchQuery, statusFilter, categoryFilter, userRole, userTags, requestedItemIds]);
+  }, [items, searchQuery, statusFilter, categoryFilter, sortBy, userRole, userTags, requestedItemIds]);
 
   const handleItemClick = (item: InventoryItem) => {
     setSelectedItem(item);
@@ -155,8 +167,11 @@ const Index = () => {
     location_id?: string; 
     image_url?: string; 
     tags?: string[];
+    item_tags?: string[];
     quantity?: number;
     is_consumable?: boolean;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   }) => {
     await addItem({
       name: item.name,
@@ -166,8 +181,11 @@ const Index = () => {
       location_id: item.location_id,
       image_url: item.image_url,
       tags: item.tags,
+      item_tags: item.item_tags,
       quantity: item.quantity,
       is_consumable: item.is_consumable,
+      cost: item.cost ?? null,
+      contents: item.contents,
     });
   };
 
@@ -242,8 +260,11 @@ const Index = () => {
       'Checked Out By',
       'Checked Out At',
       'Quantity',
+      'Cost (USD)',
       'Consumable',
       'Tags',
+      'Item Tags',
+      'Contents',
       'Created At',
       'Last Updated',
     ];
@@ -258,8 +279,11 @@ const Index = () => {
       item.checked_out_by_name,
       formatDate(item.checked_out_at),
       item.quantity ?? '',
+      item.cost != null ? Number(item.cost).toFixed(2) : '',
       item.is_consumable ? 'Yes' : 'No',
       item.tags?.join(', ') ?? '',
+      item.item_tags?.join(', ') ?? '',
+      (item.contents ?? []).map(c => `${c.name} x${c.quantity}`).join(', '),
       formatDate(item.created_at),
       formatDate(item.updated_at),
     ]);
@@ -299,7 +323,11 @@ const Index = () => {
       locationId: item.location_id || undefined,
       imageUrl: item.image_url || undefined,
       tags: item.tags || undefined,
+      itemTags: item.item_tags || undefined,
       quantity: item.quantity ?? undefined,
+      cost: item.cost ?? undefined,
+      contents: item.contents ?? undefined,
+      missingContents: item.missing_contents ?? undefined,
       isConsumable: item.is_consumable || undefined,
       isAtEducatorLocation,
       checkedOutBy: item.checked_out_by_name || undefined,
@@ -450,8 +478,22 @@ const Index = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name (A–Z)</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="quantity">Number (qty)</SelectItem>
+              </SelectContent>
+            </Select>
             {isAdmin && (
               <>
+                <PrintQRLabelsDialog
+                  items={items.map(i => ({ id: i.id, name: i.name, qr_code: i.qr_code, category: i.category }))}
+                  categories={categories}
+                />
                 <Button variant="outline" onClick={handleExportInventory} disabled={items.length === 0}>
                   <Download className="h-4 w-4" />
                   <span className="hidden sm:inline">Export Excel</span>
@@ -512,6 +554,7 @@ const Index = () => {
         canCheckInOut={canCheckInOut}
         bundles={bundles}
         items={items}
+        onRecordMissingContents={recordMissingContents}
       />
 
       {/* QR Scanner */}
@@ -534,6 +577,7 @@ const Index = () => {
         onCheckIn={handleCheckIn}
         onCheckOut={handleCheckOut}
         onMaintenance={handleMaintenance}
+        onRecordMissingContents={recordMissingContents}
         isAdmin={isAdmin}
         canCheckInOut={canCheckInOut}
       />

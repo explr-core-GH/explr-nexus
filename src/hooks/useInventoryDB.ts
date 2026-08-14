@@ -3,6 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+export interface ItemContentLine {
+  name: string;
+  quantity: number;
+}
+
+export interface MissingContentLine extends ItemContentLine {
+  reported_at?: string;
+  reported_by?: string;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -17,9 +27,13 @@ export interface InventoryItem {
   checked_out_by_name: string | null;
   checked_out_at: string | null;
   tags: string[] | null;
+  item_tags: string[] | null;
   quantity: number | null;
   is_consumable: boolean;
   bundle_id: string | null;
+  cost: number | null;
+  contents: ItemContentLine[];
+  missing_contents: MissingContentLine[];
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +47,25 @@ export interface ActivityLog {
   performed_by_name: string;
   created_at: string;
 }
+
+const asLines = (value: unknown): ItemContentLine[] =>
+  Array.isArray(value)
+    ? (value as ItemContentLine[]).filter(l => l && typeof l === 'object' && 'name' in l)
+    : [];
+
+// Rows come back with jsonb columns typed loosely; normalize them to app types.
+export function normalizeItem(row: Record<string, any>, checkedOutByName: string | null = null): InventoryItem {
+  return {
+    ...(row as InventoryItem),
+    status: row.status as 'available' | 'checked-out' | 'maintenance',
+    item_tags: (row.item_tags as string[] | null) ?? [],
+    contents: asLines(row.contents),
+    missing_contents: asLines(row.missing_contents) as MissingContentLine[],
+    checked_out_by_name: checkedOutByName,
+  };
+}
+
+
 
 export function useInventoryDB() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -72,11 +105,10 @@ export function useInventoryDB() {
         }
       }
       
-      setItems((data || []).map(item => ({
-        ...item,
-        status: item.status as 'available' | 'checked-out' | 'maintenance',
-        checked_out_by_name: item.checked_out_by ? (userNameMap[item.checked_out_by] || null) : null
-      })));
+      setItems((data || []).map(item => normalizeItem(
+        item,
+        item.checked_out_by ? (userNameMap[item.checked_out_by] || null) : null
+      )));
     } catch (error: any) {
       console.error('Error fetching items:', error);
       toast({
@@ -131,8 +163,11 @@ export function useInventoryDB() {
     location_id?: string; 
     image_url?: string; 
     tags?: string[];
+    item_tags?: string[];
     quantity?: number;
     is_consumable?: boolean;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   }) => {
     if (!isAdmin) {
       toast({
@@ -151,8 +186,11 @@ export function useInventoryDB() {
         location: item.location,
         image_url: item.image_url || null,
         tags: item.tags || [],
+        item_tags: item.item_tags || [],
         quantity: item.quantity ?? 1,
         is_consumable: item.is_consumable ?? false,
+        cost: item.cost ?? null,
+        contents: item.contents ?? [],
         qr_code: generateQRCode(),
         status: 'available',
       };
@@ -169,11 +207,7 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
-      const typedData: InventoryItem = {
-        ...data,
-        status: data.status as 'available' | 'checked-out' | 'maintenance',
-        checked_out_by_name: null
-      };
+      const typedData = normalizeItem(data);
       
       setItems(prev => [typedData, ...prev]);
       toast({
@@ -196,7 +230,7 @@ export function useInventoryDB() {
     try {
       const { error } = await supabase
         .from('inventory_items')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id);
 
       if (error) throw error;
@@ -214,6 +248,33 @@ export function useInventoryDB() {
         description: error.message || 'Failed to update item',
         variant: 'destructive',
       });
+      return false;
+    }
+  };
+
+  const recordMissingContents = async (id: string, missing: MissingContentLine[]) => {
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({ missing_contents: missing as any })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, missing_contents: missing } : item))
+      );
+
+      if (missing.length > 0) {
+        toast({
+          title: 'Missing Contents Recorded',
+          description: `${missing.length} content line(s) were not confirmed on check-in`,
+          variant: 'destructive',
+        });
+      }
+      return true;
+    } catch (error: any) {
+      console.error('Error recording missing contents:', error);
       return false;
     }
   };
@@ -709,11 +770,7 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
-      const typedData: InventoryItem[] = (data || []).map(item => ({
-        ...item,
-        status: item.status as 'available' | 'checked-out' | 'maintenance',
-        checked_out_by_name: null
-      }));
+      const typedData: InventoryItem[] = (data || []).map(item => normalizeItem(item));
 
       setItems(prev => [...typedData, ...prev]);
       return typedData;
@@ -749,6 +806,7 @@ export function useInventoryDB() {
     bulkAddItems,
     updateItem,
     deleteItem,
+    recordMissingContents,
     checkOut,
     checkIn,
     setMaintenance,

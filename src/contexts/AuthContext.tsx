@@ -22,6 +22,7 @@ interface AuthContextType {
   userRole: AppRole | null;
   userTags: string[]; // visibility tags for the current user
   isLoading: boolean;
+  roleLoading: boolean; // true until the role fetch for the current session resolves
   signOut: () => Promise<void>;
 }
 
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [userTags, setUserTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
+
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -46,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Defer profile and role fetching with setTimeout
         if (session?.user) {
+          setRoleLoading(true);
           setTimeout(() => {
             fetchProfileAndRole(session.user.id);
           }, 0);
@@ -56,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRole(null);
           setUserTags([]);
           setIsLoading(false);
+          setRoleLoading(false);
         }
       }
     );
@@ -66,9 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        setRoleLoading(true);
         fetchProfileAndRole(session.user.id);
       } else {
         setIsLoading(false);
+        setRoleLoading(false);
       }
     });
 
@@ -125,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error in fetchProfileAndRole:', error);
     } finally {
       setIsLoading(false);
+      setRoleLoading(false);
     }
   };
 
@@ -137,10 +145,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCanCheckInOut(false);
     setUserRole(null);
     setUserTags([]);
+    setRoleLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, userTags, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, isAdmin, canCheckInOut, userRole, userTags, isLoading, roleLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

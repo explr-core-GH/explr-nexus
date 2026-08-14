@@ -24,6 +24,8 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { LocationSelect } from '@/components/LocationSelect';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { TagsCheckboxGroup } from '@/components/TagsCheckboxGroup';
+import { ItemTagsSelect } from '@/components/ItemTagsSelect';
+import { ItemContentsEditor, ItemContentLine } from '@/components/ItemContentsEditor';
 import { Location } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/useCategories';
@@ -38,10 +40,13 @@ interface EditItemDialogProps {
     locationId?: string;
     imageUrl?: string;
     tags?: string[];
+    itemTags?: string[];
     status?: string;
     checkedOutBy?: string;
     isConsumable?: boolean;
     quantity?: number;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   };
   locations?: Location[];
   users?: SelectableUser[];
@@ -53,9 +58,12 @@ interface EditItemDialogProps {
     location_id: string | null;
     image_url: string | null;
     tags?: string[];
+    item_tags?: string[];
     checked_out_by?: string | null;
     is_consumable?: boolean;
     quantity?: number;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   }) => Promise<boolean>;
   trigger?: React.ReactNode;
 }
@@ -69,9 +77,12 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
   const [locationId, setLocationId] = useState<string | undefined>(item.locationId);
   const [imageUrl, setImageUrl] = useState<string | null>(item.imageUrl || null);
   const [tags, setTags] = useState<string[]>(item.tags || []);
+  const [itemTags, setItemTags] = useState<string[]>(item.itemTags || []);
   const [assignedToName, setAssignedToName] = useState<string>(item.checkedOutBy || '');
   const [isConsumable, setIsConsumable] = useState(item.isConsumable ?? false);
   const [quantity, setQuantity] = useState<number>(item.quantity ?? 1);
+  const [cost, setCost] = useState<string>(item.cost != null ? String(item.cost) : '');
+  const [contents, setContents] = useState<ItemContentLine[]>(item.contents || []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -85,9 +96,12 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
     setLocationId(item.locationId);
     setImageUrl(item.imageUrl || null);
     setTags(item.tags || []);
+    setItemTags(item.itemTags || []);
     setAssignedToName(item.checkedOutBy || '');
     setIsConsumable(item.isConsumable ?? false);
     setQuantity(item.quantity ?? 1);
+    setCost(item.cost != null ? String(item.cost) : '');
+    setContents(item.contents || []);
   }, [item]);
 
   const handleLocationChange = (locId: string) => {
@@ -108,6 +122,7 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
 
     setIsSubmitting(true);
     try {
+      const parsedCost = cost.trim() === '' ? null : Number(cost);
       const updates: Parameters<typeof onUpdate>[1] = {
         name,
         description,
@@ -116,8 +131,11 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
         location_id: locationId || null,
         image_url: imageUrl,
         tags,
+        item_tags: itemTags,
         is_consumable: isConsumable,
         quantity: quantity > 0 ? quantity : 1,
+        cost: parsedCost !== null && !Number.isNaN(parsedCost) ? parsedCost : null,
+        contents: contents.filter(c => c.name.trim() !== ''),
       };
       
       // Only include checked_out_by if item is checked out
@@ -243,6 +261,14 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
             </p>
             <TagsCheckboxGroup selectedTags={tags} onTagsChange={setTags} />
           </div>
+          {/* Item Tags */}
+          <div className="space-y-2">
+            <Label>Item Tags</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Keywords that make this item easier to find
+            </p>
+            <ItemTagsSelect selectedTags={itemTags} onTagsChange={setItemTags} />
+          </div>
           {/* Quantity */}
           <div className="space-y-2">
             <Label htmlFor="edit-quantity">Quantity</Label>
@@ -254,6 +280,27 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
               placeholder="1"
             />
+          </div>
+          {/* Cost */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-cost">Cost (USD)</Label>
+            <Input
+              id="edit-cost"
+              type="number"
+              min="0"
+              step="0.01"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="Optional, e.g., 149.99"
+            />
+          </div>
+          {/* Item contents */}
+          <div className="space-y-2">
+            <Label>Item Contents</Label>
+            <p className="text-xs text-muted-foreground">
+              Optional checklist of what is inside this item. Contents must be verified on check-in.
+            </p>
+            <ItemContentsEditor contents={contents} onChange={setContents} />
           </div>
           {/* Consumable checkbox */}
           <div className="flex items-center space-x-2">

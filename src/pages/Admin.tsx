@@ -64,6 +64,7 @@ import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { ResourceManagement } from '@/components/ResourceManagement';
 import { CategoryManagement } from '@/components/CategoryManagement';
+import { TagManagement } from '@/components/TagManagement';
 import { BundleManagement } from '@/components/BundleManagement';
 import { useBundles } from '@/hooks/useBundles';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
@@ -158,6 +159,17 @@ const Admin = () => {
     const counts: Record<string, number> = {};
     items.forEach(item => {
       counts[item.category] = (counts[item.category] || 0) + 1;
+    });
+    return counts;
+  }, [items]);
+
+  // Calculate item counts by searchable tag
+  const itemCountsByTag = useMemo(() => {
+    const counts: Record<string, number> = {};
+    items.forEach(item => {
+      (item.item_tags ?? []).forEach(tag => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
     });
     return counts;
   }, [items]);
@@ -687,6 +699,7 @@ const Admin = () => {
           {/* Categories Tab */}
           <TabsContent value="categories" className="space-y-6 mt-6">
             <CategoryManagement itemCounts={itemCountsByCategory} />
+            <TagManagement tagCounts={itemCountsByTag} />
           </TabsContent>
 
           {/* Resources Tab */}

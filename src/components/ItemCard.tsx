@@ -1,4 +1,4 @@
-import { Package, MapPin, User, Clock, QrCode, Repeat, GraduationCap } from 'lucide-react';
+import { Package, MapPin, User, Clock, QrCode, Repeat, GraduationCap, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { InventoryItem } from '@/types/inventory';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,23 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
                 <Repeat className="h-3 w-3" />
                 Qty: {item.quantity ?? 1}
               </Badge>
+            )}
+            {(item.contents?.length ?? 0) > 0 && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <ClipboardCheck className="h-3 w-3" />
+                Item Check
+              </Badge>
+            )}
+            {(item.missingContents?.length ?? 0) > 0 && (
+              <Badge variant="destructive" className="text-xs gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Missing contents
+              </Badge>
+            )}
+            {item.cost != null && (
+              <span className="text-xs text-muted-foreground">
+                ${Number(item.cost).toFixed(2)}
+              </span>
             )}
           </div>
         </div>

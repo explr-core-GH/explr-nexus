@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, MapPin, Calendar, Tag, ArrowLeftRight, Trash2, Pencil, Layers, ClipboardCheck, AlertTriangle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -22,9 +22,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { EditItemDialog } from '@/components/EditItemDialog';
+import { ContentsChecklist } from '@/components/ContentsChecklist';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { RequestItemButton } from '@/components/RequestItemButton';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem, ItemContentLine } from '@/types/inventory';
 import { Location } from '@/hooks/useLocations';
 import { BundleWithItems } from '@/hooks/useBundles';
 import { InventoryItem as DBInventoryItem } from '@/hooks/useInventoryDB';
@@ -56,6 +57,7 @@ interface ItemDetailDialogProps {
   canCheckInOut?: boolean;
   bundles?: BundleWithItems[];
   items?: DBInventoryItem[];
+  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => unknown;
 }
 
 export function ItemDetailDialog({
@@ -72,12 +74,21 @@ export function ItemDetailDialog({
   canCheckInOut = true,
   bundles = [],
   items = [],
+  onRecordMissingContents,
 }: ItemDetailDialogProps) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedUserName, setSelectedUserName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [contentsChecked, setContentsChecked] = useState<boolean[]>([]);
   const { userRole } = useAuth();
   const isMember = userRole === 'member';
+
+  const itemContents = item?.contents ?? [];
+
+  useEffect(() => {
+    setContentsChecked(itemContents.map(() => false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, itemContents.length]);
 
   if (!item) return null;
 
@@ -139,7 +150,11 @@ export function ItemDetailDialog({
         
         await onCheckOut(item.id, selectedUserName.trim(), bundleItemIds, selectedUserId || undefined);
       } else if (item.status === 'checked-out') {
-        await onCheckIn(item.id, selectedUserName.trim());
+        const success = await onCheckIn(item.id, selectedUserName.trim());
+        if (success && itemContents.length > 0 && onRecordMissingContents) {
+          const missing = itemContents.filter((_, i) => !contentsChecked[i]);
+          await onRecordMissingContents(item.id, missing);
+        }
       }
       setSelectedUserId('');
       setSelectedUserName('');
@@ -215,7 +230,58 @@ export function ItemDetailDialog({
               <MapPin className="h-3 w-3" />
               {item.location}
             </span>
+            {item.cost != null && (
+              <span className="status-pill bg-secondary text-secondary-foreground">
+                <DollarSign className="h-3 w-3" />
+                {Number(item.cost).toFixed(2)}
+              </span>
+            )}
+            {itemContents.length > 0 && (
+              <span className="status-pill bg-secondary text-secondary-foreground">
+                <ClipboardCheck className="h-3 w-3" />
+                Item Check
+              </span>
+            )}
           </div>
+
+          {/* Item tags */}
+          {(item.itemTags?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {item.itemTags!.map(tag => (
+                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Contents */}
+          {itemContents.length > 0 && (
+            <div className="p-4 rounded-lg bg-secondary/50 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ClipboardCheck className="h-4 w-4 text-accent" />
+                Item Contents
+              </div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {itemContents.map((line, i) => (
+                  <li key={`${line.name}-${i}`}>{line.name} ×{line.quantity}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Missing contents flag */}
+          {(item.missingContents?.length ?? 0) > 0 && (
+            <div className="p-4 rounded-lg bg-destructive/10 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Missing contents reported at last check-in
+              </div>
+              <ul className="text-sm text-destructive/90 space-y-1">
+                {item.missingContents!.map((line, i) => (
+                  <li key={`${line.name}-missing-${i}`}>{line.name} ×{line.quantity}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Bundle Info - This IS a bundle */}
           {isBundleItem && (
@@ -293,6 +359,15 @@ export function ItemDetailDialog({
                   {item.status === 'available' ? 'Check Out' : 'Check In'}
                 </Button>
               </div>
+              {item.status === 'checked-out' && itemContents.length > 0 && (
+                <ContentsChecklist
+                  contents={itemContents}
+                  checked={contentsChecked}
+                  onToggle={(index, value) =>
+                    setContentsChecked(prev => prev.map((c, i) => (i === index ? value : c)))
+                  }
+                />
+              )}
             </div>
           )}
 
