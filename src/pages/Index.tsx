@@ -39,6 +39,8 @@ import { AdminNotifications } from '@/components/AdminNotifications';
 import { InstallPWAButton } from '@/components/InstallPWAButton';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { MyRequestsSheet } from '@/components/MyRequestsSheet';
+import { PrintQRLabelsDialog } from '@/components/PrintQRLabelsDialog';
+import { ItemContentLine } from '@/types/inventory';
 
 const Index = () => {
   const { 
