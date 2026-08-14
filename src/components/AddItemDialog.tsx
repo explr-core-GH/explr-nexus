@@ -251,8 +251,8 @@ export function AddItemDialog({ onAdd, locations }: AddItemDialogProps) {
             <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={!locationId}>
-              Add Item
+            <Button type="submit" className="flex-1" disabled={!locationId || isSubmitting}>
+              {isSubmitting ? 'Adding...' : 'Add Item'}
             </Button>
           </div>
         </form>
