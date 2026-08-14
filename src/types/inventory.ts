@@ -1,5 +1,10 @@
 export type ItemStatus = 'available' | 'checked-out' | 'maintenance';
 
+export interface ItemContentLine {
+  name: string;
+  quantity: number;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -13,9 +18,13 @@ export interface InventoryItem {
   locationId?: string;
   imageUrl?: string;
   tags?: string[];
+  itemTags?: string[];
   quantity?: number;
   isConsumable?: boolean;
   isAtEducatorLocation?: boolean;
+  cost?: number | null;
+  contents?: ItemContentLine[];
+  missingContents?: ItemContentLine[];
   createdAt: string;
   lastUpdated: string;
 }
