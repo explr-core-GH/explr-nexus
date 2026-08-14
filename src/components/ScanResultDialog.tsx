@@ -45,6 +45,7 @@ export function ScanResultDialog({
   onCheckIn,
   onCheckOut,
   onMaintenance,
+  onRecordMissingContents,
   isAdmin = false,
   canCheckInOut = true,
 }: ScanResultDialogProps) {
@@ -54,8 +55,16 @@ export function ScanResultDialog({
   const [actionComplete, setActionComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'check-in' | 'check-out' | 'maintenance' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [contentsChecked, setContentsChecked] = useState<boolean[]>([]);
   const { userRole } = useAuth();
   const isMember = userRole === 'member';
+
+  const itemContents = item?.contents ?? [];
+
+  useEffect(() => {
+    setContentsChecked(itemContents.map(() => false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, itemContents.length]);
 
   const handleAction = async (action: 'check-in' | 'check-out' | 'maintenance' | 'return-from-maintenance') => {
     if (!item || !selectedUserName) return;
@@ -69,6 +78,10 @@ export function ScanResultDialog({
         success = await onCheckOut(item.id, selectedUserName, newLocationId, undefined, selectedUserId || undefined);
       } else if (action === 'check-in' || action === 'return-from-maintenance') {
         success = await onCheckIn(item.id, selectedUserName, newLocationId);
+        if (success && action === 'check-in' && itemContents.length > 0 && onRecordMissingContents) {
+          const missing = itemContents.filter((_, i) => !contentsChecked[i]);
+          await onRecordMissingContents(item.id, missing);
+        }
       } else if (action === 'maintenance' && onMaintenance) {
         success = await onMaintenance(item.id, selectedUserName, newLocationId);
       }
@@ -93,6 +106,7 @@ export function ScanResultDialog({
     setSelectedUserName('');
     setActionComplete(false);
     setLastAction(null);
+    setContentsChecked(itemContents.map(() => false));
     onOpenChange(false);
   };
 
