@@ -554,6 +554,7 @@ const Index = () => {
         canCheckInOut={canCheckInOut}
         bundles={bundles}
         items={items}
+        onRecordMissingContents={recordMissingContents}
       />
 
       {/* QR Scanner */}
@@ -576,6 +577,7 @@ const Index = () => {
         onCheckIn={handleCheckIn}
         onCheckOut={handleCheckOut}
         onMaintenance={handleMaintenance}
+        onRecordMissingContents={recordMissingContents}
         isAdmin={isAdmin}
         canCheckInOut={canCheckInOut}
       />
