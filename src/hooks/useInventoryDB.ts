@@ -48,6 +48,25 @@ export interface ActivityLog {
   created_at: string;
 }
 
+const asLines = (value: unknown): ItemContentLine[] =>
+  Array.isArray(value)
+    ? (value as ItemContentLine[]).filter(l => l && typeof l === 'object' && 'name' in l)
+    : [];
+
+// Rows come back with jsonb columns typed loosely; normalize them to app types.
+export function normalizeItem(row: Record<string, any>, checkedOutByName: string | null = null): InventoryItem {
+  return {
+    ...(row as InventoryItem),
+    status: row.status as 'available' | 'checked-out' | 'maintenance',
+    item_tags: (row.item_tags as string[] | null) ?? [],
+    contents: asLines(row.contents),
+    missing_contents: asLines(row.missing_contents) as MissingContentLine[],
+    checked_out_by_name: checkedOutByName,
+  };
+}
+
+
+
 export function useInventoryDB() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
