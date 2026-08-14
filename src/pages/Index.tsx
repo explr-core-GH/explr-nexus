@@ -54,6 +54,7 @@ const Index = () => {
     checkOut, 
     deleteItem, 
     setMaintenance,
+    recordMissingContents,
     findByQrCode, 
     getStats 
   } = useInventoryDB();
@@ -67,6 +68,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'newest' | 'quantity'>('name');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
