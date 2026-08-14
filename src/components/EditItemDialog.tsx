@@ -122,6 +122,7 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
 
     setIsSubmitting(true);
     try {
+      const parsedCost = cost.trim() === '' ? null : Number(cost);
       const updates: Parameters<typeof onUpdate>[1] = {
         name,
         description,
@@ -130,8 +131,11 @@ export function EditItemDialog({ item, locations = [], users = [], onUpdate, tri
         location_id: locationId || null,
         image_url: imageUrl,
         tags,
+        item_tags: itemTags,
         is_consumable: isConsumable,
         quantity: quantity > 0 ? quantity : 1,
+        cost: parsedCost !== null && !Number.isNaN(parsedCost) ? parsedCost : null,
+        contents: contents.filter(c => c.name.trim() !== ''),
       };
       
       // Only include checked_out_by if item is checked out
