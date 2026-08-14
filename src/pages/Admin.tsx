@@ -18,7 +18,9 @@ import {
   Package,
   UserPlus,
   MessageSquare,
-  School
+  School,
+  FolderKanban,
+  Lock
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -71,6 +73,8 @@ import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { AdminRequestsPanel } from '@/components/AdminRequestsPanel';
 import { EditUserLocationDialog } from '@/components/EditUserLocationDialog';
+import { ProjectManagement } from '@/components/ProjectManagement';
+import { ReservedHoldsPanel } from '@/components/ReservedHoldsPanel';
 import { format } from 'date-fns';
 
 interface Educator {
@@ -221,7 +225,7 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 max-w-4xl">
+          <TabsList className="grid w-full grid-cols-9 max-w-5xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
@@ -235,10 +239,19 @@ const Admin = () => {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="projects" className="gap-2">
+              <FolderKanban className="h-4 w-4" />
+              <span className="hidden sm:inline">Projects</span>
+            </TabsTrigger>
+            <TabsTrigger value="reserved" className="gap-2">
+              <Lock className="h-4 w-4" />
+              <span className="hidden sm:inline">Reserved</span>
+            </TabsTrigger>
             <TabsTrigger value="locations" className="gap-2">
               <MapPin className="h-4 w-4" />
               <span className="hidden sm:inline">Locations</span>
             </TabsTrigger>
+
             <TabsTrigger value="schools" className="gap-2">
               <School className="h-4 w-4" />
               <span className="hidden sm:inline">Schools</span>
@@ -683,6 +696,16 @@ const Admin = () => {
           {/* Schools Tab */}
           <TabsContent value="schools" className="space-y-6 mt-6">
             <SchoolsPanel />
+          </TabsContent>
+
+          {/* Projects Tab */}
+          <TabsContent value="projects" className="space-y-6 mt-6">
+            <ProjectManagement items={items} />
+          </TabsContent>
+
+          {/* Reserved Holds Tab */}
+          <TabsContent value="reserved" className="space-y-6 mt-6">
+            <ReservedHoldsPanel />
           </TabsContent>
 
           {/* Bundles Tab */}

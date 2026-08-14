@@ -24,7 +24,7 @@ interface RequestItemButtonProps {
   item: InventoryItem;
 }
 
-const SPECIAL_GROUP_OPTIONS = [
+export const SPECIAL_GROUP_OPTIONS = [
   'ELL (English Language Learners)',
   'IEP / Special Education',
   '504 Plan',

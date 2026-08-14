@@ -228,11 +228,13 @@ export type Database = {
           created_at: string
           free_reduced_lunch: string | null
           id: string
-          item_id: string
+          item_id: string | null
           item_name: string
           message: string | null
           number_of_students: number | null
           preferred_dates: string[] | null
+          project_id: string | null
+          project_name: string | null
           requester_email: string | null
           requester_id: string
           requester_name: string
@@ -252,11 +254,13 @@ export type Database = {
           created_at?: string
           free_reduced_lunch?: string | null
           id?: string
-          item_id: string
+          item_id?: string | null
           item_name: string
           message?: string | null
           number_of_students?: number | null
           preferred_dates?: string[] | null
+          project_id?: string | null
+          project_name?: string | null
           requester_email?: string | null
           requester_id: string
           requester_name: string
@@ -276,11 +280,13 @@ export type Database = {
           created_at?: string
           free_reduced_lunch?: string | null
           id?: string
-          item_id?: string
+          item_id?: string | null
           item_name?: string
           message?: string | null
           number_of_students?: number | null
           preferred_dates?: string[] | null
+          project_id?: string | null
+          project_name?: string | null
           requester_email?: string | null
           requester_id?: string
           requester_name?: string
@@ -299,6 +305,74 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_reservations: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          item_name: string
+          project_id: string | null
+          quantity: number
+          request_id: string
+          reserved_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          item_name: string
+          project_id?: string | null
+          quantity?: number
+          request_id: string
+          reserved_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_name?: string
+          project_id?: string | null
+          quantity?: number
+          request_id?: string
+          reserved_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_reservations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_reservations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_reservations_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "item_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -556,6 +630,125 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      project_curriculum: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_path: string | null
+          id: string
+          project_id: string
+          title: string
+          type: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          id?: string
+          project_id: string
+          title: string
+          type?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          id?: string
+          project_id?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_curriculum_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          project_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          project_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          project_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_archived: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_archived?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_archived?: boolean
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
