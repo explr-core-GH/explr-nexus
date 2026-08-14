@@ -43,7 +43,8 @@ export function ReservedHoldsPanel() {
       locations,
       1,
       itemIds.slice(1),
-      request?.requesterId
+      request?.requesterId,
+      true
     );
     if (ok) {
       await fulfillForRequest(requestId);
