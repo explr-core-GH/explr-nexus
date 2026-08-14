@@ -167,8 +167,11 @@ const Index = () => {
     location_id?: string; 
     image_url?: string; 
     tags?: string[];
+    item_tags?: string[];
     quantity?: number;
     is_consumable?: boolean;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   }) => {
     await addItem({
       name: item.name,
@@ -178,8 +181,11 @@ const Index = () => {
       location_id: item.location_id,
       image_url: item.image_url,
       tags: item.tags,
+      item_tags: item.item_tags,
       quantity: item.quantity,
       is_consumable: item.is_consumable,
+      cost: item.cost ?? null,
+      contents: item.contents,
     });
   };
 
