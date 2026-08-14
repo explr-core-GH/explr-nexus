@@ -353,7 +353,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground">
         <div className="container py-4">
@@ -457,8 +457,8 @@ const Index = () => {
         </div>
 
         {/* Filters & Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative grow min-w-[180px] basis-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search items, QR codes, locations..."
@@ -467,54 +467,52 @@ const Index = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="checked-out">Checked Out</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Name (A–Z)</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="quantity">Number (qty)</SelectItem>
-              </SelectContent>
-            </Select>
-            {isAdmin && (
-              <>
-                <PrintQRLabelsDialog
-                  items={items.map(i => ({ id: i.id, name: i.name, qr_code: i.qr_code, category: i.category }))}
-                  categories={categories}
-                />
-                <Button variant="outline" onClick={handleExportInventory} disabled={items.length === 0}>
-                  <Download className="h-4 w-4" />
-                  <span className="hidden sm:inline">Export Excel</span>
-                </Button>
-                <CSVImportDialog onImport={bulkAddItems} />
-                <AddItemDialog onAdd={handleAddItem} locations={locations} />
-              </>
-            )}
-          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="available">Available</SelectItem>
+              <SelectItem value="checked-out">Checked Out</SelectItem>
+              <SelectItem value="maintenance">Maintenance</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Name (A–Z)</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="quantity">Number (qty)</SelectItem>
+            </SelectContent>
+          </Select>
+          {isAdmin && (
+            <>
+              <PrintQRLabelsDialog
+                items={items.map(i => ({ id: i.id, name: i.name, qr_code: i.qr_code, category: i.category }))}
+                categories={categories}
+              />
+              <Button variant="outline" onClick={handleExportInventory} disabled={items.length === 0}>
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export Excel</span>
+              </Button>
+              <CSVImportDialog onImport={bulkAddItems} />
+              <AddItemDialog onAdd={handleAddItem} locations={locations} />
+            </>
+          )}
         </div>
 
         {/* Items Grid */}
