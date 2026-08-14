@@ -163,8 +163,11 @@ export function useInventoryDB() {
     location_id?: string; 
     image_url?: string; 
     tags?: string[];
+    item_tags?: string[];
     quantity?: number;
     is_consumable?: boolean;
+    cost?: number | null;
+    contents?: ItemContentLine[];
   }) => {
     if (!isAdmin) {
       toast({
@@ -183,8 +186,11 @@ export function useInventoryDB() {
         location: item.location,
         image_url: item.image_url || null,
         tags: item.tags || [],
+        item_tags: item.item_tags || [],
         quantity: item.quantity ?? 1,
         is_consumable: item.is_consumable ?? false,
+        cost: item.cost ?? null,
+        contents: item.contents ?? [],
         qr_code: generateQRCode(),
         status: 'available',
       };
@@ -201,11 +207,7 @@ export function useInventoryDB() {
 
       if (error) throw error;
 
-      const typedData: InventoryItem = {
-        ...data,
-        status: data.status as 'available' | 'checked-out' | 'maintenance',
-        checked_out_by_name: null
-      };
+      const typedData = normalizeItem(data);
       
       setItems(prev => [typedData, ...prev]);
       toast({
@@ -228,7 +230,7 @@ export function useInventoryDB() {
     try {
       const { error } = await supabase
         .from('inventory_items')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id);
 
       if (error) throw error;
