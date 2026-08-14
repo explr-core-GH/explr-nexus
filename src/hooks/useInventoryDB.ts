@@ -314,7 +314,7 @@ export function useInventoryDB() {
     }
   };
 
-  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string; address?: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[], selectedUserId?: string) => {
+  const checkOut = async (itemId: string, userName: string, newLocationId?: string, locations?: { id: string; name: string; address?: string }[], quantityToCheckOut: number = 1, bundleItemIds?: string[], selectedUserId?: string, bypassReservations: boolean = false) => {
     if (!user) return false;
     
     // Use the selected user ID if provided, otherwise fall back to logged-in user
@@ -329,6 +329,41 @@ export function useInventoryDB() {
       });
       return false;
     }
+
+    // Respect reserved holds from submitted project requests so stock isn't double-promised.
+    if (!bypassReservations) {
+      const involvedIds = [itemId, ...(bundleItemIds ?? [])];
+      const { data: reservationRows } = await supabase
+        .from('item_reservations')
+        .select('item_id, quantity')
+        .in('item_id', involvedIds)
+        .eq('status', 'reserved');
+
+      const reservedByItem = new Map<string, number>();
+      (reservationRows ?? []).forEach(r => {
+        reservedByItem.set(r.item_id, (reservedByItem.get(r.item_id) ?? 0) + (r.quantity ?? 0));
+      });
+
+      const blocked = involvedIds.find(id => {
+        const reserved = reservedByItem.get(id) ?? 0;
+        if (reserved === 0) return false;
+        const target = items.find(i => i.id === id);
+        const total = target?.quantity ?? 1;
+        const needed = id === itemId ? quantityToCheckOut : 1;
+        return total - reserved < needed;
+      });
+
+      if (blocked) {
+        const blockedItem = items.find(i => i.id === blocked);
+        toast({
+          title: 'Item Reserved',
+          description: `${blockedItem?.name ?? 'This item'} is on hold for a project request. Release the hold in Admin → Reserved to check it out.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
 
     // If checking out to a specific user, try to get their organization location
     let educatorLocation: { id: string; name: string } | null = null;
