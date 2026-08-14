@@ -806,6 +806,7 @@ export function useInventoryDB() {
     bulkAddItems,
     updateItem,
     deleteItem,
+    recordMissingContents,
     checkOut,
     checkIn,
     setMaintenance,
