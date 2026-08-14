@@ -699,7 +699,7 @@ const Admin = () => {
           {/* Categories Tab */}
           <TabsContent value="categories" className="space-y-6 mt-6">
             <CategoryManagement itemCounts={itemCountsByCategory} />
-            <TagManagement />
+            <TagManagement tagCounts={itemCountsByTag} />
           </TabsContent>
 
           {/* Resources Tab */}
