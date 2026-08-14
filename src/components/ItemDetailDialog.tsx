@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { EditItemDialog } from '@/components/EditItemDialog';
+import { ContentsChecklist } from '@/components/ContentsChecklist';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { RequestItemButton } from '@/components/RequestItemButton';
 import { InventoryItem, ItemContentLine } from '@/types/inventory';
