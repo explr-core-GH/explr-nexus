@@ -229,7 +229,58 @@ export function ItemDetailDialog({
               <MapPin className="h-3 w-3" />
               {item.location}
             </span>
+            {item.cost != null && (
+              <span className="status-pill bg-secondary text-secondary-foreground">
+                <DollarSign className="h-3 w-3" />
+                {Number(item.cost).toFixed(2)}
+              </span>
+            )}
+            {itemContents.length > 0 && (
+              <span className="status-pill bg-secondary text-secondary-foreground">
+                <ClipboardCheck className="h-3 w-3" />
+                Item Check
+              </span>
+            )}
           </div>
+
+          {/* Item tags */}
+          {(item.itemTags?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {item.itemTags!.map(tag => (
+                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Contents */}
+          {itemContents.length > 0 && (
+            <div className="p-4 rounded-lg bg-secondary/50 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ClipboardCheck className="h-4 w-4 text-accent" />
+                Item Contents
+              </div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {itemContents.map((line, i) => (
+                  <li key={`${line.name}-${i}`}>{line.name} ×{line.quantity}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Missing contents flag */}
+          {(item.missingContents?.length ?? 0) > 0 && (
+            <div className="p-4 rounded-lg bg-destructive/10 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Missing contents reported at last check-in
+              </div>
+              <ul className="text-sm text-destructive/90 space-y-1">
+                {item.missingContents!.map((line, i) => (
+                  <li key={`${line.name}-missing-${i}`}>{line.name} ×{line.quantity}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Bundle Info - This IS a bundle */}
           {isBundleItem && (
