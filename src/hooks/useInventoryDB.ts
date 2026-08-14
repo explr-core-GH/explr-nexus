@@ -86,11 +86,10 @@ export function useInventoryDB() {
         }
       }
       
-      setItems((data || []).map(item => ({
-        ...item,
-        status: item.status as 'available' | 'checked-out' | 'maintenance',
-        checked_out_by_name: item.checked_out_by ? (userNameMap[item.checked_out_by] || null) : null
-      })));
+      setItems((data || []).map(item => normalizeItem(
+        item,
+        item.checked_out_by ? (userNameMap[item.checked_out_by] || null) : null
+      )));
     } catch (error: any) {
       console.error('Error fetching items:', error);
       toast({
