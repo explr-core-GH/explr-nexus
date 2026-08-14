@@ -260,8 +260,11 @@ const Index = () => {
       'Checked Out By',
       'Checked Out At',
       'Quantity',
+      'Cost (USD)',
       'Consumable',
       'Tags',
+      'Item Tags',
+      'Contents',
       'Created At',
       'Last Updated',
     ];
@@ -276,8 +279,11 @@ const Index = () => {
       item.checked_out_by_name,
       formatDate(item.checked_out_at),
       item.quantity ?? '',
+      item.cost != null ? Number(item.cost).toFixed(2) : '',
       item.is_consumable ? 'Yes' : 'No',
       item.tags?.join(', ') ?? '',
+      item.item_tags?.join(', ') ?? '',
+      (item.contents ?? []).map(c => `${c.name} x${c.quantity}`).join(', '),
       formatDate(item.created_at),
       formatDate(item.updated_at),
     ]);
