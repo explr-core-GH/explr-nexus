@@ -12,8 +12,9 @@ import {
 import { LocationSelect } from '@/components/LocationSelect';
 import { UserSelect, SelectableUser } from '@/components/UserSelect';
 import { RequestItemButton } from '@/components/RequestItemButton';
+import { ContentsChecklist } from '@/components/ContentsChecklist';
 import { Location } from '@/hooks/useLocations';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem, ItemContentLine } from '@/types/inventory';
 import { ScanMode } from '@/components/ScanButton';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +29,7 @@ interface ScanResultDialogProps {
   onCheckIn: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
   onCheckOut: (itemId: string, userName: string, locationId?: string, bundleItemIds?: string[], selectedUserId?: string) => Promise<boolean> | boolean;
   onMaintenance?: (itemId: string, userName: string, locationId?: string) => Promise<boolean> | boolean;
+  onRecordMissingContents?: (itemId: string, missing: ItemContentLine[]) => Promise<void> | void;
   isAdmin?: boolean;
   canCheckInOut?: boolean;
 }
