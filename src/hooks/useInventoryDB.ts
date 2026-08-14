@@ -3,6 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+export interface ItemContentLine {
+  name: string;
+  quantity: number;
+}
+
+export interface MissingContentLine extends ItemContentLine {
+  reported_at?: string;
+  reported_by?: string;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -17,9 +27,13 @@ export interface InventoryItem {
   checked_out_by_name: string | null;
   checked_out_at: string | null;
   tags: string[] | null;
+  item_tags: string[] | null;
   quantity: number | null;
   is_consumable: boolean;
   bundle_id: string | null;
+  cost: number | null;
+  contents: ItemContentLine[];
+  missing_contents: MissingContentLine[];
   created_at: string;
   updated_at: string;
 }
