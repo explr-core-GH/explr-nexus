@@ -163,6 +163,17 @@ const Admin = () => {
     return counts;
   }, [items]);
 
+  // Calculate item counts by searchable tag
+  const itemCountsByTag = useMemo(() => {
+    const counts: Record<string, number> = {};
+    items.forEach(item => {
+      (item.item_tags ?? []).forEach(tag => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [items]);
+
   const isLoading = authLoading || usersLoading || locationsLoading || itemsLoading || bundlesLoading;
 
   // Redirect non-admins (moved after all hooks)
