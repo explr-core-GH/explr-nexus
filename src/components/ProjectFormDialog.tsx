@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ImageUpload';
+import { InventoryItemCombobox } from '@/components/InventoryItemCombobox';
 import { InventoryItem } from '@/hooks/useInventoryDB';
 import { Project, ProjectInput } from '@/hooks/useProjects';
 import { supabase } from '@/integrations/supabase/client';
