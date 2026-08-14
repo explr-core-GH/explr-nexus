@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Defer profile and role fetching with setTimeout
         if (session?.user) {
+          setRoleLoading(true);
           setTimeout(() => {
             fetchProfileAndRole(session.user.id);
           }, 0);
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRole(null);
           setUserTags([]);
           setIsLoading(false);
+          setRoleLoading(false);
         }
       }
     );
@@ -69,9 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        setRoleLoading(true);
         fetchProfileAndRole(session.user.id);
       } else {
         setIsLoading(false);
+        setRoleLoading(false);
       }
     });
 
