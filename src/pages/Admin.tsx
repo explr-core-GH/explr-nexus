@@ -64,6 +64,7 @@ import { LocationItemsDialog } from '@/components/LocationItemsDialog';
 import { EditUserTagsDialog } from '@/components/EditUserTagsDialog';
 import { ResourceManagement } from '@/components/ResourceManagement';
 import { CategoryManagement } from '@/components/CategoryManagement';
+import { TagManagement } from '@/components/TagManagement';
 import { BundleManagement } from '@/components/BundleManagement';
 import { useBundles } from '@/hooks/useBundles';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
@@ -687,6 +688,7 @@ const Admin = () => {
           {/* Categories Tab */}
           <TabsContent value="categories" className="space-y-6 mt-6">
             <CategoryManagement itemCounts={itemCountsByCategory} />
+            <TagManagement />
           </TabsContent>
 
           {/* Resources Tab */}
