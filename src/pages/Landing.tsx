@@ -20,6 +20,7 @@ import {
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { PublicEquipmentMap } from '@/components/PublicEquipmentMap';
 
 const howItWorks = [
   {
@@ -195,6 +196,23 @@ const Landing = () => {
               </Link>
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Live equipment map */}
+      <section className="bg-background border-t border-border">
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="mb-8 max-w-2xl">
+            <span className="text-accent font-bold uppercase tracking-widest text-sm">Live</span>
+            <h2 className="font-['Sora'] text-4xl font-bold text-foreground mt-2">
+              Where our equipment is right now
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              A live look at the lending library — how much is on the shelves, how much is out in
+              classrooms and programs, and where our sites are. Updates as items are checked in and out.
+            </p>
+          </div>
+          <PublicEquipmentMap />
         </div>
       </section>
 
