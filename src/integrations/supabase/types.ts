@@ -889,6 +889,7 @@ export type Database = {
       }
       teachers: {
         Row: {
+          address: string | null
           created_at: string
           email: string | null
           full_name: string
@@ -897,6 +898,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           email?: string | null
           full_name: string
@@ -905,6 +907,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           email?: string | null
           full_name?: string

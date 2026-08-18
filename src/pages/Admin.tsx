@@ -76,6 +76,7 @@ import { EditUserLocationDialog } from '@/components/EditUserLocationDialog';
 import { ProjectManagement } from '@/components/ProjectManagement';
 import { ReservedHoldsPanel } from '@/components/ReservedHoldsPanel';
 import { EducatorVisibilityPanel } from '@/components/EducatorVisibilityPanel';
+import { TeachersPanel } from '@/components/TeachersPanel';
 import { format } from 'date-fns';
 
 interface Educator {
@@ -226,7 +227,7 @@ const Admin = () => {
 
       <main className="container py-6 space-y-6">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-10 max-w-5xl">
+          <TabsList className="grid w-full grid-cols-11 max-w-5xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
@@ -256,6 +257,10 @@ const Admin = () => {
             <TabsTrigger value="schools" className="gap-2">
               <School className="h-4 w-4" />
               <span className="hidden sm:inline">Schools</span>
+            </TabsTrigger>
+            <TabsTrigger value="teachers" className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Teachers</span>
             </TabsTrigger>
             <TabsTrigger value="bundles" className="gap-2">
               <Package className="h-4 w-4" />
@@ -738,6 +743,11 @@ const Admin = () => {
           {/* Educator Visibility Tab */}
           <TabsContent value="educators" className="space-y-6 mt-6">
             <EducatorVisibilityPanel />
+          </TabsContent>
+
+          {/* Teachers Tab */}
+          <TabsContent value="teachers" className="space-y-6 mt-6">
+            <TeachersPanel />
           </TabsContent>
         </Tabs>
       </main>

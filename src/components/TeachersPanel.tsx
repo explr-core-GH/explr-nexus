@@ -1,0 +1,421 @@
+import { useMemo, useState } from 'react';
+import {
+  Users,
+  UserPlus,
+  Printer,
+  KeyRound,
+  Trash2,
+  Loader2,
+  Check,
+  Pencil,
+  MapPin,
+  GraduationCap,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
+import { useTeachers, type SelectableTeacher, type Teacher } from '@/hooks/useTeachers';
+import { usePartnerSchools } from '@/hooks/usePartnerSchools';
+import { useTeacherAssignments } from '@/hooks/useTeacherAssignments';
+import { useSelectableUsers } from '@/hooks/useSelectableUsers';
+import { supabase } from '@/integrations/supabase/client';
+import { printTeacherCredentials } from '@/lib/printCredentials';
+import { useToast } from '@/hooks/use-toast';
+
+export function TeachersPanel() {
+  const {
+    teachers,
+    isLoading,
+    addTeacher,
+    updateTeacher,
+    createTeacherAccount,
+    resetTeacherPassword,
+    findOrCreateForProfile,
+    deleteTeacher,
+  } = useTeachers();
+  const { schools, findOrCreateByOhioIrn } = usePartnerSchools();
+  const { assignments, addAssignment } = useTeacherAssignments();
+  const { users } = useSelectableUsers();
+  const { toast } = useToast();
+
+  // Registered users surfaced alongside manual teachers, for the assign dialog.
+  const selectableTeachers = useMemo<SelectableTeacher[]>(() => {
+    const linkedProfiles = new Set(teachers.filter((t) => t.profile_id).map((t) => t.profile_id));
+    const list: SelectableTeacher[] = teachers.map((t) => ({
+      key: t.id,
+      full_name: t.full_name,
+      email: t.email,
+      teacherId: t.id,
+      profileId: t.profile_id,
+      isRegistered: !!t.profile_id,
+    }));
+    for (const u of users) {
+      if (!linkedProfiles.has(u.id)) {
+        list.push({
+          key: `profile:${u.id}`,
+          full_name: u.full_name,
+          email: u.email,
+          teacherId: null,
+          profileId: u.id,
+          isRegistered: true,
+        });
+      }
+    }
+    return list.sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [teachers, users]);
+
+  const resolveTeacherId = async (sel: SelectableTeacher): Promise<string | null> => {
+    if (sel.teacherId) return sel.teacherId;
+    if (sel.profileId) {
+      const t = await findOrCreateForProfile(sel.profileId, sel.full_name, sel.email);
+      return t?.id ?? null;
+    }
+    return null;
+  };
+
+  const schoolNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of schools) map.set(s.id, s.name);
+    return map;
+  }, [schools]);
+
+  const assignmentsByTeacher = useMemo(() => {
+    const map = new Map<string, { school: string; year: string | null }[]>();
+    for (const a of assignments) {
+      if (!a.teacher_id) continue;
+      const list = map.get(a.teacher_id) ?? [];
+      list.push({ school: schoolNameById.get(a.school_id) ?? 'School', year: a.school_year });
+      map.set(a.teacher_id, list);
+    }
+    return map;
+  }, [assignments, schoolNameById]);
+
+  // ---- Generate account dialog ------------------------------------------
+  const [genOpen, setGenOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [lastCred, setLastCred] = useState<{ fullName: string; email: string; password: string } | null>(null);
+
+  const openGenerate = () => {
+    setName('');
+    setEmail('');
+    setAddress('');
+    setLastCred(null);
+    setGenOpen(true);
+  };
+
+  const handleGenerate = async () => {
+    if (!name.trim() || !email.trim()) {
+      toast({ title: 'Missing information', description: 'Enter the teacher name and email.', variant: 'destructive' });
+      return;
+    }
+    setBusy(true);
+    const cred = await createTeacherAccount({ fullName: name.trim(), email: email.trim(), address: address.trim() || null });
+    setBusy(false);
+    if (cred) {
+      const full = { fullName: name.trim(), email: cred.email, password: cred.password };
+      setLastCred(full);
+      printTeacherCredentials(full);
+    }
+  };
+
+  // ---- Reset password ----------------------------------------------------
+  const [resettingId, setResettingId] = useState<string | null>(null);
+
+  const handleReset = async (teacher: Teacher) => {
+    if (!teacher.profile_id) return;
+    setResettingId(teacher.id);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('id', teacher.profile_id)
+        .maybeSingle();
+      if (!data?.user_id) {
+        toast({ title: 'No login account', description: 'This teacher has no login to reset.', variant: 'destructive' });
+        return;
+      }
+      const password = await resetTeacherPassword(data.user_id);
+      if (password) {
+        printTeacherCredentials({ fullName: teacher.full_name, email: teacher.email ?? '', password });
+      }
+    } finally {
+      setResettingId(null);
+    }
+  };
+
+  // ---- Inline address edit ----------------------------------------------
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editAddress, setEditAddress] = useState('');
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  const startEdit = (t: Teacher) => {
+    setEditId(t.id);
+    setEditAddress(t.address ?? '');
+  };
+  const saveEdit = async (id: string) => {
+    setSavingAddress(true);
+    await updateTeacher(id, { address: editAddress.trim() || null });
+    setSavingAddress(false);
+    setEditId(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-accent/10">
+            <Users className="h-6 w-6 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Teachers</h2>
+            <p className="text-muted-foreground">
+              Create teacher logins, print their credentials, and link them to an Ohio school.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={openGenerate} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Generate Teacher Account
+          </Button>
+          <AssignTeacherDialog
+            teacherOptions={selectableTeachers}
+            assignments={assignments}
+            onAddTeacher={addTeacher}
+            onResolveTeacherId={resolveTeacherId}
+            onResolveSchool={findOrCreateByOhioIrn}
+            onAssign={addAssignment}
+          />
+        </div>
+      </div>
+
+      <div className="border rounded-xl overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Teacher</TableHead>
+              <TableHead className="hidden md:table-cell">Address</TableHead>
+              <TableHead className="hidden sm:table-cell">School(s)</TableHead>
+              <TableHead>Account</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Loading teachers…
+                </TableCell>
+              </TableRow>
+            ) : teachers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  No teachers yet — generate an account to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              teachers.map((t) => {
+                const teacherAssignments = assignmentsByTeacher.get(t.id) ?? [];
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell>
+                      <p className="font-medium">{t.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{t.email ?? 'No email'}</p>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {editId === t.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            value={editAddress}
+                            onChange={(e) => setEditAddress(e.target.value)}
+                            placeholder="Street, city, ZIP"
+                            className="h-8 w-48"
+                          />
+                          <Button size="icon" variant="ghost" className="h-8 w-8" disabled={savingAddress} onClick={() => saveEdit(t.id)}>
+                            {savingAddress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(t)}
+                          className="group flex items-center gap-1.5 text-sm text-left"
+                        >
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className={t.address ? '' : 'text-muted-foreground italic'}>
+                            {t.address || 'Add address'}
+                          </span>
+                          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60" />
+                        </button>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {teacherAssignments.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">Not linked</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {teacherAssignments.map((a, i) => (
+                            <Badge key={i} variant="secondary" className="gap-1 text-xs">
+                              <GraduationCap className="h-3 w-3" />
+                              {a.school}
+                              {a.year ? ` · ${a.year}` : ''}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {t.profile_id ? (
+                        <Badge variant="outline" className="bg-available/10 text-available border-available/30">Has login</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">No login</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {t.profile_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5"
+                            disabled={resettingId === t.id}
+                            onClick={() => handleReset(t)}
+                          >
+                            {resettingId === t.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <KeyRound className="h-3.5 w-3.5" />
+                            )}
+                            <span className="hidden lg:inline">Reset &amp; print</span>
+                          </Button>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove teacher</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Remove <strong>{t.full_name}</strong> from the teachers list? This does not delete
+                                their login account — remove that from the Users tab if needed.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteTeacher(t.id)}
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Generate account dialog */}
+      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Teacher Account</DialogTitle>
+            <DialogDescription>
+              Creates a login with a generated password. Print the credentials for the teacher —
+              they can change the password after signing in.
+            </DialogDescription>
+          </DialogHeader>
+
+          {lastCred ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-secondary/40 p-4 space-y-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Email / username</p>
+                  <p className="font-mono font-semibold break-all">{lastCred.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Password</p>
+                  <p className="font-mono font-semibold text-lg">{lastCred.password}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This password is shown once. Print it now — if it's lost, use “Reset &amp; print” on the teacher row.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button className="flex-1 gap-2" onClick={() => printTeacherCredentials(lastCred)}>
+                  <Printer className="h-4 w-4" />
+                  Print again
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setGenOpen(false)}>
+                  Done
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="teacher-name">Full name *</Label>
+                <Input id="teacher-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="teacher-email">Email *</Label>
+                <Input id="teacher-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@school.org" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="teacher-address">Address (optional)</Label>
+                <Input id="teacher-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, city, ZIP" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setGenOpen(false)} disabled={busy}>Cancel</Button>
+                <Button onClick={handleGenerate} disabled={busy} className="gap-2">
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                  Create &amp; print
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

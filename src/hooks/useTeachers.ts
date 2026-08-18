@@ -83,6 +83,78 @@ export function useTeachers() {
     return addTeacher({ full_name: fullName, email, profile_id: profileId });
   };
 
+  const updateTeacher = async (
+    id: string,
+    updates: Partial<Pick<Teacher, 'full_name' | 'email' | 'address'>>
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('teachers')
+        .update(updates)
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (error) throw error;
+      setTeachers((prev) =>
+        prev.map((t) => (t.id === id ? (data as Teacher) : t)).sort((a, b) => a.full_name.localeCompare(b.full_name))
+      );
+      return data as Teacher;
+    } catch (error: any) {
+      console.error('Error updating teacher:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to update teacher', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  /**
+   * Provisions a real login account for a teacher via the create-teacher edge
+   * function (service role). Returns the generated credentials once so the admin
+   * can print them — the password is never stored in plaintext.
+   */
+  const createTeacherAccount = async (input: {
+    fullName: string;
+    email: string;
+    address?: string | null;
+  }): Promise<{ email: string; password: string } | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-teacher', {
+        body: { fullName: input.fullName, email: input.email, address: input.address ?? null },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: 'Could not create account', description: data.error, variant: 'destructive' });
+        return null;
+      }
+      await fetchTeachers();
+      toast({ title: 'Account created', description: `${input.fullName} can now sign in with the printed credentials.` });
+      return { email: data.email, password: data.password };
+    } catch (error: any) {
+      console.error('Error creating teacher account:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to create teacher account', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  /** Regenerates a permanent password for an existing account (returned once). */
+  const resetTeacherPassword = async (userId: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-teacher', {
+        body: { action: 'reset', userId },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: 'Could not reset password', description: data.error, variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Password reset', description: 'Print the new credentials for the teacher.' });
+      return data.password as string;
+    } catch (error: any) {
+      console.error('Error resetting teacher password:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to reset password', variant: 'destructive' });
+      return null;
+    }
+  };
+
   const deleteTeacher = async (id: string) => {
     if (!isAdmin) {
       toast({ title: 'Permission Denied', description: 'Only admins can delete teachers', variant: 'destructive' });
@@ -105,5 +177,15 @@ export function useTeachers() {
     }
   };
 
-  return { teachers, isLoading, addTeacher, findOrCreateForProfile, deleteTeacher, refetch: fetchTeachers };
+  return {
+    teachers,
+    isLoading,
+    addTeacher,
+    updateTeacher,
+    createTeacherAccount,
+    resetTeacherPassword,
+    findOrCreateForProfile,
+    deleteTeacher,
+    refetch: fetchTeachers,
+  };
 }
