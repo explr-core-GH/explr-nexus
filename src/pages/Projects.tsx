@@ -6,14 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserMenu } from '@/components/UserMenu';
 import { ProjectCard } from '@/components/ProjectCard';
+import { MyRequestsSheet } from '@/components/MyRequestsSheet';
 import { useProjects } from '@/hooks/useProjects';
 import { useReservations } from '@/hooks/useReservations';
 import { useInventoryDB } from '@/hooks/useInventoryDB';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Projects = () => {
   const { activeProjects, isLoading } = useProjects();
   const { items } = useInventoryDB();
   const { reservedByItem, refetch: refetchReservations } = useReservations();
+  const { userRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -43,6 +46,7 @@ const Projects = () => {
                 <span className="hidden sm:inline">Resources</span>
               </Link>
             </Button>
+            {userRole === 'member' && <MyRequestsSheet />}
             <UserMenu />
           </div>
         </div>

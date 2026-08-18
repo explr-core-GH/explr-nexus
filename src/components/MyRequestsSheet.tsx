@@ -20,6 +20,7 @@ interface MyRequest {
   itemName: string;
   message: string | null;
   status: 'pending' | 'approved' | 'denied' | 'pending_confirmation';
+  isWaitlist: boolean;
   adminResponse: string | null;
   preferredDates: string[];
   confirmedDate: string | null;
@@ -53,6 +54,7 @@ export function MyRequestsSheet() {
         itemName: r.item_name,
         message: r.message,
         status: r.status as 'pending' | 'approved' | 'denied' | 'pending_confirmation',
+        isWaitlist: r.is_waitlist ?? false,
         adminResponse: r.admin_response,
         preferredDates: (r.preferred_dates as string[]) || [],
         confirmedDate: r.confirmed_date,
@@ -149,11 +151,21 @@ export function MyRequestsSheet() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      {getStatusIcon(request.status)}
+                      {request.isWaitlist ? <Clock className="h-4 w-4 text-amber-500" /> : getStatusIcon(request.status)}
                       <p className="font-medium">{request.itemName}</p>
                     </div>
-                    {getStatusBadge(request.status)}
+                    {request.isWaitlist ? (
+                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">Waitlisted</Badge>
+                    ) : (
+                      getStatusBadge(request.status)
+                    )}
                   </div>
+
+                  {request.isWaitlist && (
+                    <div className="p-2 rounded text-sm bg-amber-500/10 text-amber-700 border-l-4 border-amber-500">
+                      You're on the waitlist. We'll notify you when this kit is available.
+                    </div>
+                  )}
 
                   <div className="text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">

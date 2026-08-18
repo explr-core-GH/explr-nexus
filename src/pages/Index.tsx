@@ -63,7 +63,7 @@ const Index = () => {
   const { locations } = useLocations();
   const { users: selectableUsers } = useSelectableUsers();
   const { bundles, getItemBundles } = useBundles();
-  const { profile, canCheckInOut, userRole, userTags } = useAuth();
+  const { profile, canCheckInOut, userRole } = useAuth();
   const { requests } = useItemRequests();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,23 +96,11 @@ const Index = () => {
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      // Tag-based filtering for members
-      // Members only see items with matching tags or items tagged with "All"
-      if (userRole === 'member') {
-        const itemTags = item.tags || [];
-        // If item has no tags, member can't see it
-        if (itemTags.length === 0) return false;
-        // If item has "All" tag, member can see it
-        if (itemTags.includes('All')) {
-          // Continue to other filters
-        } else {
-          // Check if member has any matching tags
-          const hasMatchingTag = itemTags.some(tag => userTags.includes(tag));
-          if (!hasMatchingTag) return false;
-        }
-      }
+      // Educators (members) only see items an admin has explicitly switched on
+      // for them via Admin → Educator Visibility. Everything else is Projects-only.
+      if (userRole === 'member' && !item.educator_visible) return false;
 
-      const matchesSearch = 
+      const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
         item.qr_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -138,7 +126,7 @@ const Index = () => {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [items, searchQuery, statusFilter, categoryFilter, sortBy, userRole, userTags, requestedItemIds]);
+  }, [items, searchQuery, statusFilter, categoryFilter, sortBy, userRole, requestedItemIds]);
 
   const handleItemClick = (item: InventoryItem) => {
     setSelectedItem(item);

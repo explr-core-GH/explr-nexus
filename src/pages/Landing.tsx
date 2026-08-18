@@ -90,13 +90,20 @@ const whoWeAre = [
 ];
 
 const Landing = () => {
-  const { user } = useAuth();
+  const { user, userRole, isLoading, roleLoading } = useAuth();
   const navigate = useNavigate();
 
-  // If already signed in, send them straight to the inventory dashboard.
+  // If already signed in, route by role once it's known: educators go to
+  // Projects (their default view), everyone else to the inventory dashboard.
   useEffect(() => {
-    if (user) navigate('/inventory', { replace: true });
-  }, [user, navigate]);
+    if (!user || isLoading || roleLoading) return;
+    navigate(userRole === 'member' ? '/projects' : '/inventory', { replace: true });
+  }, [user, userRole, isLoading, roleLoading, navigate]);
+
+  // Avoid flashing the marketing page to a logged-in user mid-redirect.
+  if (user) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   return (
     <div className="min-h-screen bg-background font-['Manrope']">

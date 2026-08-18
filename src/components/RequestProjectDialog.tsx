@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -31,10 +31,14 @@ interface RequestProjectDialogProps {
   project: { id: string; name: string };
   lines: ProjectRequestLine[];
   disabled?: boolean;
+  /** The kit isn't fully available — request becomes a waitlist join. */
+  waitlist?: boolean;
+  /** Short reason shown to the teacher, e.g. "Currently checked out". */
+  unavailableReason?: string;
   onRequested?: () => void;
 }
 
-export function RequestProjectDialog({ project, lines, disabled, onRequested }: RequestProjectDialogProps) {
+export function RequestProjectDialog({ project, lines, disabled, waitlist = false, unavailableReason, onRequested }: RequestProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [preferredDates, setPreferredDates] = useState<Date[]>([]);
@@ -101,7 +105,8 @@ export function RequestProjectDialog({ project, lines, disabled, onRequested }: 
         usageHours: numHours,
         usageDays: numDays,
       },
-      returnDueDate
+      returnDueDate,
+      waitlist
     );
     setIsLoading(false);
 
@@ -117,17 +122,24 @@ export function RequestProjectDialog({ project, lines, disabled, onRequested }: 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full gap-2" disabled={disabled}>
-          <ShoppingCart className="h-4 w-4" />
-          Request this project
+        <Button
+          className="w-full gap-2"
+          variant={waitlist ? 'outline' : 'default'}
+          disabled={disabled}
+        >
+          {waitlist ? <Clock className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+          {waitlist ? 'Join the waitlist' : 'Request this project'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Request "{project.name}"</DialogTitle>
+          <DialogTitle>
+            {waitlist ? `Join the waitlist for "${project.name}"` : `Request "${project.name}"`}
+          </DialogTitle>
           <DialogDescription>
-            All {totalUnits} unit{totalUnits === 1 ? '' : 's'} for this project are added in one request and held for you
-            while an admin confirms a pickup date.
+            {waitlist
+              ? `This kit isn't available right now${unavailableReason ? ` (${unavailableReason.toLowerCase()})` : ''}. Join the waitlist and we'll notify you when it frees up. Nothing is held until then.`
+              : `All ${totalUnits} unit${totalUnits === 1 ? '' : 's'} for this project are added in one request and held for you while an admin confirms a pickup date.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -232,7 +244,7 @@ export function RequestProjectDialog({ project, lines, disabled, onRequested }: 
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? 'Sending...' : 'Submit request'}
+            {isLoading ? 'Sending...' : waitlist ? 'Join waitlist' : 'Submit request'}
           </Button>
         </DialogFooter>
       </DialogContent>

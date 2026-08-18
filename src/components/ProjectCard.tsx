@@ -1,4 +1,4 @@
-import { Package, FileText, ExternalLink, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Package, FileText, ExternalLink, CheckCircle2, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItem } from '@/hooks/useInventoryDB';
@@ -26,6 +26,11 @@ export function ProjectCard({ project, items, reservedByItem, onRequested }: Pro
   });
 
   const fullyAvailable = rows.length > 0 && rows.every(r => r.ok);
+  // If any needed item is physically out (checked out / maintenance) that's the
+  // headline reason; otherwise the shortfall is another teacher's active hold.
+  const anyCheckedOut = rows.some(r => r.item && r.item.status !== 'available');
+  const isWaitlist = rows.length > 0 && !fullyAvailable;
+  const unavailableReason = anyCheckedOut ? 'Currently checked out' : 'On hold for another request';
 
   const lines: ProjectRequestLine[] = rows
     .filter(r => r.item)
@@ -45,8 +50,8 @@ export function ProjectCard({ project, items, reservedByItem, onRequested }: Pro
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg">{project.name}</CardTitle>
           <Badge variant={fullyAvailable ? 'default' : 'secondary'} className="shrink-0 gap-1">
-            {fullyAvailable ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-            {fullyAvailable ? 'Available' : 'Partially available'}
+            {fullyAvailable ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+            {fullyAvailable ? 'Available' : unavailableReason}
           </Badge>
         </div>
         {project.description && <p className="text-sm text-muted-foreground">{project.description}</p>}
@@ -92,6 +97,8 @@ export function ProjectCard({ project, items, reservedByItem, onRequested }: Pro
           project={{ id: project.id, name: project.name }}
           lines={lines}
           disabled={lines.length === 0}
+          waitlist={isWaitlist}
+          unavailableReason={unavailableReason}
           onRequested={onRequested}
         />
       </CardContent>

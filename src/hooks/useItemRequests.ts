@@ -14,6 +14,7 @@ export interface ItemRequest {
   requesterOrganization: string | null;
   message: string | null;
   status: 'pending' | 'approved' | 'denied' | 'pending_confirmation';
+  isWaitlist: boolean;
   adminResponse: string | null;
   preferredDates: string[];
   confirmedDate: string | null;
@@ -64,6 +65,7 @@ export function useItemRequests() {
         requesterOrganization: r.requester_organization,
         message: r.message,
         status: r.status as 'pending' | 'approved' | 'denied' | 'pending_confirmation',
+        isWaitlist: r.is_waitlist ?? false,
         adminResponse: r.admin_response,
         preferredDates: (r.preferred_dates as string[]) || [],
         confirmedDate: r.confirmed_date,
@@ -161,7 +163,8 @@ export function useItemRequests() {
     message?: string,
     preferredDates?: Date[],
     demographics?: RequestDemographics,
-    returnDueDate?: Date | null
+    returnDueDate?: Date | null,
+    isWaitlist: boolean = false
   ): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -178,6 +181,7 @@ export function useItemRequests() {
         requester_organization: requesterOrganization,
         message: message || null,
         preferred_dates: preferredDates?.map(d => d.toISOString()) || [],
+        is_waitlist: isWaitlist,
       };
 
       if (demographics) {
@@ -200,7 +204,9 @@ export function useItemRequests() {
 
       if (error) throw error;
 
-      if (lines.length > 0) {
+      // Waitlist requests don't hold stock — the kit isn't available yet, so
+      // there's nothing to reserve. A normal request places holds as before.
+      if (!isWaitlist && lines.length > 0) {
         const { error: reservationError } = await supabase.from('item_reservations').insert(
           lines.map(l => ({
             request_id: created.id,
@@ -214,10 +220,17 @@ export function useItemRequests() {
         if (reservationError) throw reservationError;
       }
 
-      toast({
-        title: 'Project Requested',
-        description: `${lines.length} item${lines.length === 1 ? '' : 's'} are now reserved while an admin reviews your request.`,
-      });
+      toast(
+        isWaitlist
+          ? {
+              title: "You're on the waitlist",
+              description: `We'll let you know when "${project.name}" is available. An admin can see your spot in line.`,
+            }
+          : {
+              title: 'Project Requested',
+              description: `${lines.length} item${lines.length === 1 ? '' : 's'} are now reserved while an admin reviews your request.`,
+            }
+      );
 
       await fetchRequests();
       return true;

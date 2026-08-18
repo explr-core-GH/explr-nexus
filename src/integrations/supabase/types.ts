@@ -143,6 +143,7 @@ export type Database = {
           cost: number | null
           created_at: string
           description: string | null
+          educator_visible: boolean
           id: string
           image_url: string | null
           is_consumable: boolean | null
@@ -166,6 +167,7 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          educator_visible?: boolean
           id?: string
           image_url?: string | null
           is_consumable?: boolean | null
@@ -189,6 +191,7 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          educator_visible?: boolean
           id?: string
           image_url?: string | null
           is_consumable?: boolean | null
@@ -228,6 +231,7 @@ export type Database = {
           created_at: string
           free_reduced_lunch: string | null
           id: string
+          is_waitlist: boolean
           item_id: string | null
           item_name: string
           message: string | null
@@ -254,6 +258,7 @@ export type Database = {
           created_at?: string
           free_reduced_lunch?: string | null
           id?: string
+          is_waitlist?: boolean
           item_id?: string | null
           item_name: string
           message?: string | null
@@ -280,6 +285,7 @@ export type Database = {
           created_at?: string
           free_reduced_lunch?: string | null
           id?: string
+          is_waitlist?: boolean
           item_id?: string | null
           item_name?: string
           message?: string | null

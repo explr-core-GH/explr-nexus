@@ -30,6 +30,7 @@ export interface InventoryItem {
   item_tags: string[] | null;
   quantity: number | null;
   is_consumable: boolean;
+  educator_visible: boolean;
   bundle_id: string | null;
   cost: number | null;
   contents: ItemContentLine[];
@@ -59,6 +60,7 @@ export function normalizeItem(row: Record<string, any>, checkedOutByName: string
     ...(row as InventoryItem),
     status: row.status as 'available' | 'checked-out' | 'maintenance',
     item_tags: (row.item_tags as string[] | null) ?? [],
+    educator_visible: row.educator_visible ?? false,
     contents: asLines(row.contents),
     missing_contents: asLines(row.missing_contents) as MissingContentLine[],
     checked_out_by_name: checkedOutByName,

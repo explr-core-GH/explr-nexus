@@ -270,7 +270,15 @@ export function AdminRequestsPanel() {
                     Requested by: {request.requesterName}
                   </p>
                 </div>
-                {getStatusBadge(request.status)}
+                <div className="flex flex-col items-end gap-1">
+                  {request.isWaitlist && (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 gap-1">
+                      <Clock className="h-3 w-3" />
+                      Waitlist
+                    </Badge>
+                  )}
+                  {getStatusBadge(request.status)}
+                </div>
               </div>
 
               <div className="space-y-1.5 text-sm">
