@@ -34,14 +34,17 @@ interface PrintQRLabelsDialogProps {
   categories: string[];
 }
 
-// Avery 94107: US Letter, 12 labels per sheet (3 across x 4 down), 2in x 2in
-const LABELS_PER_PAGE = 12;
-const COLS = 3;
-const LABEL_SIZE = 2; // in
-const H_MARGIN = 0.875; // in
-const V_MARGIN = 0.9375; // in
-const GUTTER = 0.375; // in
-const PITCH = LABEL_SIZE + GUTTER; // 2.375in
+// Avery 6570: US Letter, 32 labels per sheet (4 across x 8 down), 1.75in x 1.25in.
+// Top/bottom margin 0.5in, side margins 0.46875in, no vertical gap between rows.
+const COLS = 4;
+const ROWS = 8;
+const LABELS_PER_PAGE = COLS * ROWS; // 32
+const LABEL_W = 1.75; // in
+const LABEL_H = 1.25; // in
+const TOP_MARGIN = 0.5; // in
+const LEFT_MARGIN = 0.46875; // in
+const H_PITCH = 1.9375; // in (label 1.75 + 0.1875 column gap)
+const V_PITCH = 1.25; // in (rows touch, no gap)
 
 const OFFSET_KEY = 'nexus.labelCalibration';
 
@@ -56,10 +59,11 @@ function cellStyle(index: number, offsetX: number, offsetY: number): React.CSSPr
   const col = index % COLS;
   return {
     position: 'absolute',
-    width: `${LABEL_SIZE}in`,
-    height: `${LABEL_SIZE}in`,
-    left: `${H_MARGIN + col * PITCH + offsetX}in`,
-    top: `${V_MARGIN + row * PITCH + offsetY}in`,
+    boxSizing: 'border-box',
+    width: `${LABEL_W}in`,
+    height: `${LABEL_H}in`,
+    left: `${LEFT_MARGIN + col * H_PITCH + offsetX}in`,
+    top: `${TOP_MARGIN + row * V_PITCH + offsetY}in`,
     overflow: 'hidden',
   };
 }
@@ -139,24 +143,33 @@ export function PrintQRLabelsDialog({ items, categories }: PrintQRLabelsDialogPr
 
   const pages = chunk(selectedItems, LABELS_PER_PAGE);
 
+  // Print isolation via display:none on everything else — NOT visibility:hidden.
+  // visibility:hidden leaves the whole app laid out (invisible but occupying
+  // space), which pushes out a stack of trailing blank pages. display:none
+  // collapses it so the sheet(s) print exactly. Also overrides the global
+  // grant-report print rule in index.css (body * { visibility: hidden }).
   const printCss = `
     .qr-print-root { display: none; }
     @media print {
-      @page { size: letter; margin: 0; }
-      body * { visibility: hidden !important; }
-      .qr-print-root, .qr-print-root * { visibility: visible !important; }
+      @page { size: letter; margin: 0 !important; }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body > *:not(.qr-print-root) { display: none !important; }
       .qr-print-root {
         display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
+        position: static !important;
         background: #fff;
         color: #000;
       }
+      .qr-print-root * { visibility: visible !important; }
       .qr-page {
         position: relative;
         width: 8.5in;
         height: 11in;
+        overflow: hidden;
         page-break-after: always;
         break-after: page;
       }
@@ -177,7 +190,7 @@ export function PrintQRLabelsDialog({ items, categories }: PrintQRLabelsDialogPr
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Print QR Labels</DialogTitle>
             <DialogDescription>
-              Avery 94107 — 2" × 2" square labels, 12 per US Letter sheet (3 across × 4 down).
+              Avery 6570 — 1¾" × 1¼" labels, 32 per US Letter sheet (4 across × 8 down).
             </DialogDescription>
           </DialogHeader>
 
@@ -324,32 +337,50 @@ export function PrintQRLabelsDialog({ items, categories }: PrintQRLabelsDialogPr
                       style={{
                         ...cellStyle(index, offsetX, offsetY),
                         display: 'flex',
-                        flexDirection: 'column',
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0.12in',
-                        textAlign: 'center',
+                        gap: '0.07in',
+                        padding: '0.07in',
                         fontFamily: 'sans-serif',
                       }}
                     >
-                      <QRCodeSVG value={item.qr_code} size={110} level="M" />
+                      <QRCodeSVG value={item.qr_code} size={96} level="M" />
                       <div
                         style={{
-                          fontSize: '7.5pt',
-                          fontWeight: 600,
-                          lineHeight: 1.1,
-                          marginTop: '0.05in',
-                          maxWidth: '1.7in',
+                          flex: 1,
+                          minWidth: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
                           overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
                         }}
                       >
-                        {item.name}
-                      </div>
-                      <div style={{ fontSize: '6pt', fontFamily: 'monospace' }}>
-                        {item.qr_code}
+                        <div
+                          style={{
+                            fontSize: '7pt',
+                            fontWeight: 700,
+                            lineHeight: 1.12,
+                            overflow: 'hidden',
+                            wordBreak: 'break-word',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '6pt',
+                            fontFamily: 'monospace',
+                            marginTop: '0.03in',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {item.qr_code}
+                        </div>
                       </div>
                     </div>
                   ))}
