@@ -140,7 +140,7 @@ export function TeachersPanel() {
     deleteTeacher,
   } = useTeachers();
   const { schools, findOrCreateByOhioIrn } = usePartnerSchools();
-  const { assignments, addAssignment, updateAssignment } = useTeacherAssignments();
+  const { assignments, addAssignment, updateAssignment, deleteAssignment } = useTeacherAssignments();
   const { toast } = useToast();
 
   const schoolNameById = useMemo(() => {
@@ -235,12 +235,13 @@ export function TeachersPanel() {
     setBusy(false);
   };
 
-  // ---- Change school dialog ---------------------------------------------
+  // ---- Manage schools dialog (add / change / remove) --------------------
   const [schoolTeacher, setSchoolTeacher] = useState<Teacher | null>(null);
   const [pickSchool, setPickSchool] = useState<OhioSchool | null>(null);
   const [linking, setLinking] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const openChangeSchool = (t: Teacher) => {
+  const openManageSchools = (t: Teacher) => {
     setSchoolTeacher(t);
     setPickSchool(null);
   };
@@ -250,8 +251,18 @@ export function TeachersPanel() {
     setLinking(true);
     const ok = await linkTeacherToSchool(schoolTeacher.id, pickSchool);
     setLinking(false);
-    if (ok) setSchoolTeacher(null);
+    if (ok) setPickSchool(null);
   };
+
+  const handleRemoveAssignment = async (id: string) => {
+    setRemovingId(id);
+    await deleteAssignment(id);
+    setRemovingId(null);
+  };
+
+  const dialogAssignments = schoolTeacher
+    ? assignments.filter((a) => a.teacher_id === schoolTeacher.id)
+    : [];
 
   // ---- Reset password ----------------------------------------------------
   const [resettingId, setResettingId] = useState<string | null>(null);
@@ -368,11 +379,11 @@ export function TeachersPanel() {
                           size="sm"
                           variant="outline"
                           className="gap-1.5"
-                          onClick={() => openChangeSchool(t)}
+                          onClick={() => openManageSchools(t)}
                         >
                           <SchoolIcon className="h-3.5 w-3.5" />
                           <span className="hidden lg:inline">
-                            {teacherAssignments.length ? 'Change school' : 'Set school'}
+                            {teacherAssignments.length ? 'Manage schools' : 'Set school'}
                           </span>
                         </Button>
                         {t.profile_id && (
@@ -494,30 +505,69 @@ export function TeachersPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* Change school dialog */}
+      {/* Manage schools dialog */}
       <Dialog open={!!schoolTeacher} onOpenChange={(o) => { if (!o) setSchoolTeacher(null); }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{schoolTeacher?.full_name}'s school</DialogTitle>
+            <DialogTitle>{schoolTeacher?.full_name}'s schools</DialogTitle>
             <DialogDescription>
-              Pick the Ohio school for {currentAcademicYear()}. Their address and demographics update
-              from the Ohio data.
+              Linked schools feed grant reporting. Remove a link, or set/change the school for
+              {' '}{currentAcademicYear()} — the address and demographics come from the Ohio data.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <OhioSchoolPicker value={pickSchool} onChange={setPickSchool} />
-            {pickSchool && (
-              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                {ohioAddress(pickSchool)}
-              </p>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setSchoolTeacher(null)} disabled={linking}>Cancel</Button>
-              <Button onClick={handleChangeSchool} disabled={!pickSchool || linking} className="gap-2">
-                {linking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Save school
-              </Button>
+          <div className="space-y-4">
+            {/* Current links */}
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Current links</Label>
+              {dialogAssignments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Not linked to a school yet.</p>
+              ) : (
+                <div className="border rounded-lg divide-y">
+                  {dialogAssignments.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-2 p-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <SchoolIcon className="h-4 w-4 text-accent shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {a.partner_schools?.name ?? schoolNameById.get(a.school_id ?? '') ?? 'School'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{a.school_year ?? 'No year'}</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive shrink-0"
+                        disabled={removingId === a.id}
+                        onClick={() => handleRemoveAssignment(a.id)}
+                      >
+                        {removingId === a.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Set / change for the current year */}
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Set school for {currentAcademicYear()}
+              </Label>
+              <OhioSchoolPicker value={pickSchool} onChange={setPickSchool} />
+              {pickSchool && (
+                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  {ohioAddress(pickSchool)}
+                </p>
+              )}
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="outline" onClick={() => setSchoolTeacher(null)} disabled={linking}>Close</Button>
+                <Button onClick={handleChangeSchool} disabled={!pickSchool || linking} className="gap-2">
+                  {linking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Save school
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
