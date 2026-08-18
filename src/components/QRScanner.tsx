@@ -6,12 +6,16 @@ import { Button } from '@/components/ui/button';
 interface QRScannerProps {
   onScan: (result: string) => void;
   onClose: () => void;
+  /** Keep the camera running after each scan so several codes can be scanned in
+   *  a row (repeats of the same code are debounced). Defaults to single-scan. */
+  continuous?: boolean;
 }
 
-export function QRScanner({ onScan, onClose }: QRScannerProps) {
+export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastScanRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
 
   useEffect(() => {
     startScanner();
@@ -32,8 +36,18 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           qrbox: { width: 250, height: 250 },
         },
         (decodedText) => {
-          onScan(decodedText);
-          stopScanner();
+          if (continuous) {
+            // Debounce: the same code stays in frame for many frames, and a
+            // scanned item is likely still visible when the next one comes up.
+            const now = Date.now();
+            const last = lastScanRef.current;
+            if (last.text === decodedText && now - last.time < 1500) return;
+            lastScanRef.current = { text: decodedText, time: now };
+            onScan(decodedText);
+          } else {
+            onScan(decodedText);
+            stopScanner();
+          }
         },
         () => {} // Ignore scan failures
       );
@@ -54,7 +68,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-fade-in">
+    <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm flex flex-col animate-fade-in pointer-events-auto">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-accent/10">
@@ -62,7 +76,9 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           </div>
           <div>
             <h2 className="font-semibold text-foreground">Scan QR Code</h2>
-            <p className="text-sm text-muted-foreground">Point camera at item QR code</p>
+            <p className="text-sm text-muted-foreground">
+              {continuous ? 'Scan each item — tap ✕ when done' : 'Point camera at item QR code'}
+            </p>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>

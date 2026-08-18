@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Loader2, Upload, Link as LinkIcon } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Plus, Trash2, Loader2, Upload, Link as LinkIcon, ScanLine } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ImageUpload';
 import { InventoryItemCombobox } from '@/components/InventoryItemCombobox';
+import { QRScanner } from '@/components/QRScanner';
 import { InventoryItem } from '@/hooks/useInventoryDB';
 import { Project, ProjectInput } from '@/hooks/useProjects';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,7 +58,32 @@ export function ProjectFormDialog({ open, onOpenChange, project, items, onSubmit
   const [curriculum, setCurriculum] = useState<CurriculumRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const { toast } = useToast();
+
+  // Scan an item's QR code straight into the materials list — add it, or bump
+  // its quantity if it's already there. Built for phones: keeps the camera on.
+  const handleScanItem = (qrCode: string) => {
+    const code = qrCode.trim();
+    const item = items.find(
+      i => i.qr_code === code || i.qr_code?.toLowerCase() === code.toLowerCase()
+    );
+    if (!item) {
+      toast({ title: 'Item not found', description: `No inventory item matches "${code}".`, variant: 'destructive' });
+      return;
+    }
+    setMaterials(prev => {
+      const idx = prev.findIndex(m => m.itemId === item.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+        toast({ title: 'Added another', description: `${item.name} ×${next[idx].quantity}` });
+        return next;
+      }
+      toast({ title: 'Item added', description: item.name });
+      return [...prev, { itemId: item.id, quantity: 1 }];
+    });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -129,7 +156,11 @@ export function ProjectFormDialog({ open, onOpenChange, project, items, onSubmit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => { if (scannerOpen) e.preventDefault(); }}
+        onPointerDownOutside={(e) => { if (scannerOpen) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle>{project ? 'Edit Project' : 'New Project'}</DialogTitle>
           <DialogDescription>
@@ -160,16 +191,26 @@ export function ProjectFormDialog({ open, onOpenChange, project, items, onSubmit
           </div>
 
           <div className="space-y-3 rounded-lg border p-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <Label>Materials *</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setMaterials(prev => [...prev, { itemId: '', quantity: 1 }])}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add material
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setScannerOpen(true)}
+                >
+                  <ScanLine className="h-4 w-4 mr-1" /> Scan items
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMaterials(prev => [...prev, { itemId: '', quantity: 1 }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add material
+                </Button>
+              </div>
             </div>
             {materials.length === 0 && (
               <p className="text-sm text-muted-foreground">No materials yet — add the inventory items this project needs.</p>
@@ -300,6 +341,16 @@ export function ProjectFormDialog({ open, onOpenChange, project, items, onSubmit
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {scannerOpen &&
+        createPortal(
+          <QRScanner
+            continuous
+            onScan={handleScanItem}
+            onClose={() => setScannerOpen(false)}
+          />,
+          document.body
+        )}
     </Dialog>
   );
 }
