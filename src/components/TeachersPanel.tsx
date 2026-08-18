@@ -160,6 +160,39 @@ export function TeachersPanel() {
     return map;
   }, [assignments, schoolNameById]);
 
+  // The full Ohio record for a teacher's linked school (most recent assignment),
+  // used to derive a mailing address. assignments are ordered newest-first.
+  const ohioForTeacher = (teacherId: string): OhioSchool | null => {
+    const a = assignments.find((x) => x.teacher_id === teacherId && x.school_id);
+    if (!a?.school_id) return null;
+    return schools.find((s) => s.id === a.school_id)?.ohio_schools ?? null;
+  };
+
+  // Teachers linked to a school but missing an address — candidates for backfill.
+  const missingAddress = useMemo(
+    () => teachers.filter((t) => !t.address && ohioForTeacher(t.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [teachers, assignments, schools]
+  );
+
+  const [backfilling, setBackfilling] = useState(false);
+  const handleBackfillAddresses = async () => {
+    setBackfilling(true);
+    let count = 0;
+    for (const t of missingAddress) {
+      const ohio = ohioForTeacher(t.id);
+      if (ohio) {
+        await updateTeacher(t.id, { address: ohioAddress(ohio) });
+        count++;
+      }
+    }
+    setBackfilling(false);
+    toast({
+      title: 'Addresses filled',
+      description: `${count} teacher${count === 1 ? '' : 's'} updated from their Ohio school data.`,
+    });
+  };
+
   /**
    * Links a teacher to an Ohio school for the current year (creating or updating
    * their assignment) and refreshes their mailing address from the Ohio record.
@@ -304,10 +337,18 @@ export function TeachersPanel() {
             </p>
           </div>
         </div>
-        <Button onClick={openGenerate} className="gap-2">
-          <UserPlus className="h-4 w-4" />
-          Generate Teacher Account
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          {missingAddress.length > 0 && (
+            <Button variant="outline" className="gap-2" disabled={backfilling} onClick={handleBackfillAddresses}>
+              {backfilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+              Fill {missingAddress.length} missing address{missingAddress.length === 1 ? '' : 'es'}
+            </Button>
+          )}
+          <Button onClick={openGenerate} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Generate Teacher Account
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-xl overflow-hidden">
