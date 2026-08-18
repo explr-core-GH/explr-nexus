@@ -1,16 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Package, 
-  Search, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Package,
+  Search,
+  CheckCircle2,
+  Clock,
   Wrench,
   ShieldAlert,
   BookOpen,
   MessageSquare,
   Download,
-  FolderKanban
+  FolderKanban,
+  MapPin,
+  ChevronDown
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -41,6 +43,8 @@ import { InstallPWAButton } from '@/components/InstallPWAButton';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { MyRequestsSheet } from '@/components/MyRequestsSheet';
 import { PrintQRLabelsDialog } from '@/components/PrintQRLabelsDialog';
+import { LocationsMap } from '@/components/LocationsMap';
+import { supabase } from '@/integrations/supabase/client';
 import { ItemContentLine } from '@/types/inventory';
 
 const Index = () => {
@@ -56,10 +60,11 @@ const Index = () => {
     deleteItem, 
     setMaintenance,
     recordMissingContents,
-    findByQrCode, 
-    getStats 
+    findByQrCode,
+    getStats,
+    refetch
   } = useInventoryDB();
-  
+
   const { locations } = useLocations();
   const { users: selectableUsers } = useSelectableUsers();
   const { bundles, getItemBundles } = useBundles();
@@ -77,6 +82,23 @@ const Index = () => {
   const [scanResultOpen, setScanResultOpen] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scanNotFound, setScanNotFound] = useState(false);
+  const [showMap, setShowMap] = useState(true);
+
+  // Keep the live map/list fresh when anyone checks items in or out. The acting
+  // user already sees instant local updates; this reflects other users' changes.
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+  useEffect(() => {
+    const channel = supabase
+      .channel('inventory-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory_items' },
+        () => { refetchRef.current(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const stats = getStats();
 
@@ -441,6 +463,37 @@ const Index = () => {
               onClick={() => setStatusFilter('requested')}
               isActive={statusFilter === 'requested'}
             />
+          )}
+        </div>
+
+        {/* Live equipment map */}
+        <div className="rounded-xl border bg-card">
+          <button
+            type="button"
+            onClick={() => setShowMap(v => !v)}
+            className="w-full flex items-center gap-2 p-3 text-left"
+          >
+            <MapPin className="h-5 w-5 text-accent" />
+            <span className="font-semibold">Where's our equipment</span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-available animate-pulse-soft" />
+              Live
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${showMap ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {showMap && (
+            <div className="p-3 pt-0 space-y-2">
+              <LocationsMap locations={locations} items={items} hideEducatorNames />
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(142, 71%, 45%)' }} /> All available</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(221, 83%, 53%)' }} /> Mixed</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(0, 84%, 60%)' }} /> All checked out</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(38, 92%, 50%)' }} /> Maintenance</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(271, 91%, 65%)' }} /> Off-site with educators</span>
+              </div>
+            </div>
           )}
         </div>
 

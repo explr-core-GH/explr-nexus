@@ -12,6 +12,8 @@ interface LocationsMapProps {
   schools?: PartnerSchool[];
   onLocationClick?: (location: Location) => void;
   onSchoolClick?: (school: PartnerSchool) => void;
+  /** Hide individual educator names on off-site markers (for shared views). */
+  hideEducatorNames?: boolean;
 }
 
 // Fix default marker icons
@@ -41,7 +43,7 @@ const createColoredIcon = (color: string) => {
   });
 };
 
-export function LocationsMap({ locations, items, schools = [], onLocationClick, onSchoolClick }: LocationsMapProps) {
+export function LocationsMap({ locations, items, schools = [], onLocationClick, onSchoolClick, hideEducatorNames = false }: LocationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const { educatorLocations } = useEducatorLocations(items);
@@ -150,13 +152,22 @@ export function LocationsMap({ locations, items, schools = [], onLocationClick, 
         ? `<br/><em>+${educator.checkedOutItems.length - 5} more...</em>` 
         : '';
 
+      const badge = hideEducatorNames ? 'OFF-SITE' : 'EDUCATOR';
+      const title = hideEducatorNames
+        ? (educator.organization_name || 'Checked out off-site')
+        : educator.full_name;
+      // When names are hidden, don't repeat the org as a subtitle (it's the title).
+      const subtitle = hideEducatorNames
+        ? ''
+        : (educator.organization_name ? `<p style="font-size: 12px; color: #666; margin: 2px 0;">${educator.organization_name}</p>` : '');
+
       const popupContent = `
         <div style="min-width: 180px;">
           <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-            <span style="background: hsl(271, 91%, 65%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">EDUCATOR</span>
+            <span style="background: hsl(271, 91%, 65%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${badge}</span>
           </div>
-          <strong>${educator.full_name}</strong>
-          ${educator.organization_name ? `<p style="font-size: 12px; color: #666; margin: 2px 0;">${educator.organization_name}</p>` : ''}
+          <strong>${title}</strong>
+          ${subtitle}
           <p style="font-size: 11px; color: #888; margin: 2px 0;">${educator.organization_address || ''}</p>
           <div style="font-size: 12px; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
             <strong>${educator.checkedOutItems.length}</strong> item${educator.checkedOutItems.length !== 1 ? 's' : ''} checked out:
@@ -207,7 +218,7 @@ export function LocationsMap({ locations, items, schools = [], onLocationClick, 
     if (bounds.length > 0) {
       map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
     }
-  }, [locations, items, onLocationClick, onSchoolClick, educatorLocations, schools]);
+  }, [locations, items, onLocationClick, onSchoolClick, educatorLocations, schools, hideEducatorNames]);
 
   return (
     <div 
