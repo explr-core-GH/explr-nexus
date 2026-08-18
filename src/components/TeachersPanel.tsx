@@ -7,9 +7,10 @@ import {
   Trash2,
   Loader2,
   Check,
-  Pencil,
+  Search,
   MapPin,
   GraduationCap,
+  School as SchoolIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,65 +42,106 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AssignTeacherDialog } from '@/components/AssignTeacherDialog';
-import { useTeachers, type SelectableTeacher, type Teacher } from '@/hooks/useTeachers';
-import { usePartnerSchools } from '@/hooks/usePartnerSchools';
+import { useTeachers, type Teacher } from '@/hooks/useTeachers';
+import { usePartnerSchools, type OhioSchool } from '@/hooks/usePartnerSchools';
 import { useTeacherAssignments } from '@/hooks/useTeacherAssignments';
-import { useSelectableUsers } from '@/hooks/useSelectableUsers';
+import { useOhioSchools } from '@/hooks/useOhioSchools';
+import { buildSnapshot } from '@/lib/schoolDemographics';
+import { currentAcademicYear } from '@/lib/schoolYears';
 import { supabase } from '@/integrations/supabase/client';
 import { printTeacherCredentials } from '@/lib/printCredentials';
 import { useToast } from '@/hooks/use-toast';
+
+/** Mailing address for a teacher, derived from their Ohio school record. */
+function ohioAddress(o: OhioSchool): string {
+  const cityState = [o.city, o.city ? 'OH' : null].filter(Boolean).join(', ');
+  const parts = [o.building_name, o.address, cityState].filter(Boolean);
+  return parts.join(', ');
+}
+
+/** Searchable Ohio-school picker; shows a confirmed chip once one is chosen. */
+function OhioSchoolPicker({
+  value,
+  onChange,
+}: {
+  value: OhioSchool | null;
+  onChange: (s: OhioSchool | null) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const { results, isLoading } = useOhioSchools(query);
+
+  if (value) {
+    return (
+      <div className="border rounded-lg p-2.5 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Check className="h-4 w-4 text-available shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium truncate">{value.building_name}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {[value.district_name, value.city].filter(Boolean).join(' · ')} · IRN {value.irn}
+            </p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
+          Change
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-10"
+          placeholder="Search Ohio schools by name, district, or IRN"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      {query.trim().length >= 2 && (
+        <div className="border rounded-lg max-h-44 overflow-y-auto divide-y mt-1">
+          {isLoading ? (
+            <p className="p-3 text-sm text-muted-foreground">Searching…</p>
+          ) : results.length === 0 ? (
+            <p className="p-3 text-sm text-muted-foreground">No matches.</p>
+          ) : (
+            results.map((s) => (
+              <button
+                key={s.irn}
+                type="button"
+                onClick={() => onChange(s)}
+                className="w-full text-left p-2.5 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm">{s.building_name}</span>
+                  <Badge variant="secondary" className="text-xs shrink-0">IRN {s.irn}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {[s.district_name, s.city].filter(Boolean).join(' · ')}
+                </p>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 export function TeachersPanel() {
   const {
     teachers,
     isLoading,
-    addTeacher,
     updateTeacher,
     createTeacherAccount,
     resetTeacherPassword,
-    findOrCreateForProfile,
     deleteTeacher,
   } = useTeachers();
   const { schools, findOrCreateByOhioIrn } = usePartnerSchools();
-  const { assignments, addAssignment } = useTeacherAssignments();
-  const { users } = useSelectableUsers();
+  const { assignments, addAssignment, updateAssignment } = useTeacherAssignments();
   const { toast } = useToast();
-
-  // Registered users surfaced alongside manual teachers, for the assign dialog.
-  const selectableTeachers = useMemo<SelectableTeacher[]>(() => {
-    const linkedProfiles = new Set(teachers.filter((t) => t.profile_id).map((t) => t.profile_id));
-    const list: SelectableTeacher[] = teachers.map((t) => ({
-      key: t.id,
-      full_name: t.full_name,
-      email: t.email,
-      teacherId: t.id,
-      profileId: t.profile_id,
-      isRegistered: !!t.profile_id,
-    }));
-    for (const u of users) {
-      if (!linkedProfiles.has(u.id)) {
-        list.push({
-          key: `profile:${u.id}`,
-          full_name: u.full_name,
-          email: u.email,
-          teacherId: null,
-          profileId: u.id,
-          isRegistered: true,
-        });
-      }
-    }
-    return list.sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [teachers, users]);
-
-  const resolveTeacherId = async (sel: SelectableTeacher): Promise<string | null> => {
-    if (sel.teacherId) return sel.teacherId;
-    if (sel.profileId) {
-      const t = await findOrCreateForProfile(sel.profileId, sel.full_name, sel.email);
-      return t?.id ?? null;
-    }
-    return null;
-  };
 
   const schoolNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -112,24 +154,64 @@ export function TeachersPanel() {
     for (const a of assignments) {
       if (!a.teacher_id) continue;
       const list = map.get(a.teacher_id) ?? [];
-      list.push({ school: schoolNameById.get(a.school_id) ?? 'School', year: a.school_year });
+      list.push({ school: schoolNameById.get(a.school_id ?? '') ?? a.partner_schools?.name ?? 'School', year: a.school_year });
       map.set(a.teacher_id, list);
     }
     return map;
   }, [assignments, schoolNameById]);
 
+  /**
+   * Links a teacher to an Ohio school for the current year (creating or updating
+   * their assignment) and refreshes their mailing address from the Ohio record.
+   */
+  const linkTeacherToSchool = async (teacherId: string, ohio: OhioSchool): Promise<boolean> => {
+    const partner = await findOrCreateByOhioIrn(ohio);
+    if (!partner) return false;
+    const year = currentAcademicYear();
+    const existing = assignments.find((a) => a.teacher_id === teacherId && a.school_year === year);
+    const gl = existing?.grade_low ?? (ohio.low_grade || 'PK');
+    const gh = existing?.grade_high ?? (ohio.high_grade || '12');
+    const served = existing?.students_served ?? null;
+    const snapshot = buildSnapshot(ohio, gl, gh, served);
+
+    if (existing) {
+      await updateAssignment(existing.id, {
+        school_id: partner.id,
+        grade_low: gl,
+        grade_high: gh,
+        subject: existing.subject ?? null,
+        students_served: served,
+        school_year: year,
+        demographics_snapshot: snapshot,
+      });
+    } else {
+      await addAssignment({
+        teacher_id: teacherId,
+        school_id: partner.id,
+        grade_low: gl,
+        grade_high: gh,
+        subject: null,
+        students_served: served,
+        school_year: year,
+        demographics_snapshot: snapshot,
+      });
+    }
+    await updateTeacher(teacherId, { address: ohioAddress(ohio) });
+    return true;
+  };
+
   // ---- Generate account dialog ------------------------------------------
   const [genOpen, setGenOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
+  const [genSchool, setGenSchool] = useState<OhioSchool | null>(null);
   const [busy, setBusy] = useState(false);
   const [lastCred, setLastCred] = useState<{ fullName: string; email: string; password: string } | null>(null);
 
   const openGenerate = () => {
     setName('');
     setEmail('');
-    setAddress('');
+    setGenSchool(null);
     setLastCred(null);
     setGenOpen(true);
   };
@@ -140,13 +222,35 @@ export function TeachersPanel() {
       return;
     }
     setBusy(true);
-    const cred = await createTeacherAccount({ fullName: name.trim(), email: email.trim(), address: address.trim() || null });
-    setBusy(false);
-    if (cred) {
-      const full = { fullName: name.trim(), email: cred.email, password: cred.password };
+    const address = genSchool ? ohioAddress(genSchool) : null;
+    const result = await createTeacherAccount({ fullName: name.trim(), email: email.trim(), address });
+    if (result) {
+      if (genSchool && result.teacherId) {
+        await linkTeacherToSchool(result.teacherId, genSchool);
+      }
+      const full = { fullName: name.trim(), email: result.email, password: result.password };
       setLastCred(full);
       printTeacherCredentials(full);
     }
+    setBusy(false);
+  };
+
+  // ---- Change school dialog ---------------------------------------------
+  const [schoolTeacher, setSchoolTeacher] = useState<Teacher | null>(null);
+  const [pickSchool, setPickSchool] = useState<OhioSchool | null>(null);
+  const [linking, setLinking] = useState(false);
+
+  const openChangeSchool = (t: Teacher) => {
+    setSchoolTeacher(t);
+    setPickSchool(null);
+  };
+
+  const handleChangeSchool = async () => {
+    if (!schoolTeacher || !pickSchool) return;
+    setLinking(true);
+    const ok = await linkTeacherToSchool(schoolTeacher.id, pickSchool);
+    setLinking(false);
+    if (ok) setSchoolTeacher(null);
   };
 
   // ---- Reset password ----------------------------------------------------
@@ -174,22 +278,6 @@ export function TeachersPanel() {
     }
   };
 
-  // ---- Inline address edit ----------------------------------------------
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editAddress, setEditAddress] = useState('');
-  const [savingAddress, setSavingAddress] = useState(false);
-
-  const startEdit = (t: Teacher) => {
-    setEditId(t.id);
-    setEditAddress(t.address ?? '');
-  };
-  const saveEdit = async (id: string) => {
-    setSavingAddress(true);
-    await updateTeacher(id, { address: editAddress.trim() || null });
-    setSavingAddress(false);
-    setEditId(null);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -200,24 +288,15 @@ export function TeachersPanel() {
           <div>
             <h2 className="text-2xl font-bold">Teachers</h2>
             <p className="text-muted-foreground">
-              Create teacher logins, print their credentials, and link them to an Ohio school.
+              Create teacher logins and link each to an Ohio school — address and demographics come
+              from the Ohio data automatically.
             </p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={openGenerate} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Generate Teacher Account
-          </Button>
-          <AssignTeacherDialog
-            teacherOptions={selectableTeachers}
-            assignments={assignments}
-            onAddTeacher={addTeacher}
-            onResolveTeacherId={resolveTeacherId}
-            onResolveSchool={findOrCreateByOhioIrn}
-            onAssign={addAssignment}
-          />
-        </div>
+        <Button onClick={openGenerate} className="gap-2">
+          <UserPlus className="h-4 w-4" />
+          Generate Teacher Account
+        </Button>
       </div>
 
       <div className="border rounded-xl overflow-hidden">
@@ -225,8 +304,8 @@ export function TeachersPanel() {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Teacher</TableHead>
-              <TableHead className="hidden md:table-cell">Address</TableHead>
-              <TableHead className="hidden sm:table-cell">School(s)</TableHead>
+              <TableHead className="hidden lg:table-cell">Address</TableHead>
+              <TableHead className="hidden sm:table-cell">School</TableHead>
               <TableHead>Account</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -253,32 +332,13 @@ export function TeachersPanel() {
                       <p className="font-medium">{t.full_name}</p>
                       <p className="text-xs text-muted-foreground">{t.email ?? 'No email'}</p>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {editId === t.id ? (
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            value={editAddress}
-                            onChange={(e) => setEditAddress(e.target.value)}
-                            placeholder="Street, city, ZIP"
-                            className="h-8 w-48"
-                          />
-                          <Button size="icon" variant="ghost" className="h-8 w-8" disabled={savingAddress} onClick={() => saveEdit(t.id)}>
-                            {savingAddress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(t)}
-                          className="group flex items-center gap-1.5 text-sm text-left"
-                        >
-                          <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className={t.address ? '' : 'text-muted-foreground italic'}>
-                            {t.address || 'Add address'}
-                          </span>
-                          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60" />
-                        </button>
-                      )}
+                    <TableCell className="hidden lg:table-cell max-w-[220px]">
+                      <div className="flex items-start gap-1.5 text-sm">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        <span className={t.address ? '' : 'text-muted-foreground italic'}>
+                          {t.address || 'From school'}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {teacherAssignments.length === 0 ? (
@@ -304,6 +364,17 @@ export function TeachersPanel() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => openChangeSchool(t)}
+                        >
+                          <SchoolIcon className="h-3.5 w-3.5" />
+                          <span className="hidden lg:inline">
+                            {teacherAssignments.length ? 'Change school' : 'Set school'}
+                          </span>
+                        </Button>
                         {t.profile_id && (
                           <Button
                             size="sm"
@@ -317,7 +388,7 @@ export function TeachersPanel() {
                             ) : (
                               <KeyRound className="h-3.5 w-3.5" />
                             )}
-                            <span className="hidden lg:inline">Reset &amp; print</span>
+                            <span className="hidden xl:inline">Reset &amp; print</span>
                           </Button>
                         )}
                         <AlertDialog>
@@ -357,12 +428,12 @@ export function TeachersPanel() {
 
       {/* Generate account dialog */}
       <Dialog open={genOpen} onOpenChange={setGenOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generate Teacher Account</DialogTitle>
             <DialogDescription>
-              Creates a login with a generated password. Print the credentials for the teacher —
-              they can change the password after signing in.
+              Creates a login with a generated password. Pick the teacher's Ohio school — their
+              address and demographics come from the Ohio data.
             </DialogDescription>
           </DialogHeader>
 
@@ -402,8 +473,14 @@ export function TeachersPanel() {
                 <Input id="teacher-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@school.org" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="teacher-address">Address (optional)</Label>
-                <Input id="teacher-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, city, ZIP" />
+                <Label>School (Ohio data)</Label>
+                <OhioSchoolPicker value={genSchool} onChange={setGenSchool} />
+                {genSchool && (
+                  <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    {ohioAddress(genSchool)}
+                  </p>
+                )}
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setGenOpen(false)} disabled={busy}>Cancel</Button>
@@ -414,6 +491,35 @@ export function TeachersPanel() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Change school dialog */}
+      <Dialog open={!!schoolTeacher} onOpenChange={(o) => { if (!o) setSchoolTeacher(null); }}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{schoolTeacher?.full_name}'s school</DialogTitle>
+            <DialogDescription>
+              Pick the Ohio school for {currentAcademicYear()}. Their address and demographics update
+              from the Ohio data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <OhioSchoolPicker value={pickSchool} onChange={setPickSchool} />
+            {pickSchool && (
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                {ohioAddress(pickSchool)}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setSchoolTeacher(null)} disabled={linking}>Cancel</Button>
+              <Button onClick={handleChangeSchool} disabled={!pickSchool || linking} className="gap-2">
+                {linking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Save school
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

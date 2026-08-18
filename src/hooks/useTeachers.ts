@@ -115,7 +115,7 @@ export function useTeachers() {
     fullName: string;
     email: string;
     address?: string | null;
-  }): Promise<{ email: string; password: string } | null> => {
+  }): Promise<{ email: string; password: string; teacherId: string | null } | null> => {
     try {
       const { data, error } = await supabase.functions.invoke('create-teacher', {
         body: { fullName: input.fullName, email: input.email, address: input.address ?? null },
@@ -127,7 +127,7 @@ export function useTeachers() {
       }
       await fetchTeachers();
       toast({ title: 'Account created', description: `${input.fullName} can now sign in with the printed credentials.` });
-      return { email: data.email, password: data.password };
+      return { email: data.email, password: data.password, teacherId: data.teacherId ?? null };
     } catch (error: any) {
       console.error('Error creating teacher account:', error);
       toast({ title: 'Error', description: error.message || 'Failed to create teacher account', variant: 'destructive' });
