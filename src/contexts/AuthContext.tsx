@@ -48,13 +48,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleSession = (session: Session | null) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
       const uid = session?.user?.id ?? null;
 
+      // Signed out — clear everything.
       if (!uid) {
         loadedUserIdRef.current = null;
+        setSession(null);
+        setUser(null);
         setProfile(null);
         setIsAdmin(false);
         setCanCheckInOut(false);
@@ -65,15 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Same user as already loaded — token refresh / tab refocus. Keep the
-      // fresh session but do NOT re-gate the UI or refetch; that would remount
-      // the current route and lose the user's place.
-      if (loadedUserIdRef.current === uid) {
-        setIsLoading(false);
-        return;
-      }
+      // Same user as already loaded — this is a token refresh, which Supabase
+      // fires every time the tab regains focus. Supabase keeps the refreshed
+      // token internally, so we deliberately DON'T touch user/session state:
+      // handing out a new `user` object reference would re-run every
+      // useEffect([user]) across the app (data refetches, loading spinners) and
+      // remount pages that gate on those — closing open dialogs and throwing the
+      // user out of whatever they were doing.
+      if (loadedUserIdRef.current === uid) return;
 
+      // A genuinely new user (first load or account switch): set state once and
+      // load their profile/role.
       loadedUserIdRef.current = uid;
+      setSession(session);
+      setUser(session.user);
       setRoleLoading(true);
       // Defer the fetch so we never call back into Supabase from inside the
       // auth callback (recommended by supabase-js to avoid deadlocks).
