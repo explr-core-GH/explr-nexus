@@ -34,7 +34,7 @@ export function ProjectCard({ project, items, reservedByItem, onRequested }: Pro
   return (
     <Card className="flex flex-col overflow-hidden">
       {project.imageUrl ? (
-        <img src={project.imageUrl} alt={`${project.name} project`} className="h-40 w-full object-cover" loading="lazy" />
+        <img src={project.imageUrl} alt={`${project.name} project`} className="h-40 w-full object-contain bg-secondary" loading="lazy" />
       ) : (
         <div className="h-40 w-full bg-secondary flex items-center justify-center">
           <Package className="h-10 w-10 text-muted-foreground" />

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -39,45 +39,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(true);
 
+  // Tracks whose profile/role we've already loaded. Guards against re-gating the
+  // UI on auth events that don't change the user (e.g. TOKEN_REFRESHED fires
+  // every time the tab regains focus). Without this, roleLoading flips back to
+  // true, ProtectedRoute unmounts the current screen, and the user is bounced
+  // out of whatever they were doing.
+  const loadedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const handleSession = (session: Session | null) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      const uid = session?.user?.id ?? null;
+
+      if (!uid) {
+        loadedUserIdRef.current = null;
+        setProfile(null);
+        setIsAdmin(false);
+        setCanCheckInOut(false);
+        setUserRole(null);
+        setUserTags([]);
+        setIsLoading(false);
+        setRoleLoading(false);
+        return;
+      }
+
+      // Same user as already loaded — token refresh / tab refocus. Keep the
+      // fresh session but do NOT re-gate the UI or refetch; that would remount
+      // the current route and lose the user's place.
+      if (loadedUserIdRef.current === uid) {
+        setIsLoading(false);
+        return;
+      }
+
+      loadedUserIdRef.current = uid;
+      setRoleLoading(true);
+      // Defer the fetch so we never call back into Supabase from inside the
+      // auth callback (recommended by supabase-js to avoid deadlocks).
+      setTimeout(() => fetchProfileAndRole(uid), 0);
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer profile and role fetching with setTimeout
-        if (session?.user) {
-          setRoleLoading(true);
-          setTimeout(() => {
-            fetchProfileAndRole(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-          setCanCheckInOut(false);
-          setUserRole(null);
-          setUserTags([]);
-          setIsLoading(false);
-          setRoleLoading(false);
-        }
-      }
+      (_event, session) => handleSession(session)
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        setRoleLoading(true);
-        fetchProfileAndRole(session.user.id);
-      } else {
-        setIsLoading(false);
-        setRoleLoading(false);
-      }
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => handleSession(session));
 
     return () => subscription.unsubscribe();
   }, []);
