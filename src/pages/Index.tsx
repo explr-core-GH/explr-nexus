@@ -44,7 +44,7 @@ import { useItemRequests } from '@/hooks/useItemRequests';
 import { MyRequestsSheet } from '@/components/MyRequestsSheet';
 import { PrintQRLabelsDialog } from '@/components/PrintQRLabelsDialog';
 import { ItemsOutDialog } from '@/components/ItemsOutDialog';
-import { LocationsMap } from '@/components/LocationsMap';
+import { LocationsMap, OutGroup } from '@/components/LocationsMap';
 import { supabase } from '@/integrations/supabase/client';
 import { ItemContentLine } from '@/types/inventory';
 
@@ -84,18 +84,36 @@ const Index = () => {
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scanNotFound, setScanNotFound] = useState(false);
   const [showMap, setShowMap] = useState(true);
+  const [outGroups, setOutGroups] = useState<OutGroup[]>([]);
+
+  // Where checked-out items currently are, grouped by the holder's school.
+  const fetchOutGroups = async () => {
+    const { data } = await (supabase as unknown as {
+      from: (t: string) => { select: (c: string) => Promise<{ data: { school: string | null; latitude: number | null; longitude: number | null; item_name: string }[] | null }> };
+    }).from('items_out_map').select('school, latitude, longitude, item_name');
+    const map = new Map<string, OutGroup>();
+    for (const r of data ?? []) {
+      if (r.latitude == null || r.longitude == null || !r.school) continue;
+      if (!map.has(r.school)) map.set(r.school, { school: r.school, lat: Number(r.latitude), lng: Number(r.longitude), count: 0, items: [] });
+      const g = map.get(r.school)!;
+      g.count += 1;
+      g.items!.push(r.item_name);
+    }
+    setOutGroups([...map.values()]);
+  };
 
   // Keep the live map/list fresh when anyone checks items in or out. The acting
   // user already sees instant local updates; this reflects other users' changes.
   const refetchRef = useRef(refetch);
   refetchRef.current = refetch;
   useEffect(() => {
+    fetchOutGroups();
     const channel = supabase
       .channel('inventory-live')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'inventory_items' },
-        () => { refetchRef.current(); }
+        () => { refetchRef.current(); fetchOutGroups(); }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -486,13 +504,13 @@ const Index = () => {
           </button>
           {showMap && (
             <div className="p-3 pt-0 space-y-2">
-              <LocationsMap locations={locations} items={items} hideEducatorNames />
+              <LocationsMap locations={locations} items={items} outGroups={outGroups} hideEducatorNames />
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(142, 71%, 45%)' }} /> All available</span>
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(221, 83%, 53%)' }} /> Mixed</span>
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(0, 84%, 60%)' }} /> All checked out</span>
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(38, 92%, 50%)' }} /> Maintenance</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(271, 91%, 65%)' }} /> Off-site with educators</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(271, 91%, 65%)' }} /> Out at schools</span>
               </div>
             </div>
           )}

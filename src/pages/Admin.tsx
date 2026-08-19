@@ -77,6 +77,7 @@ import { ProjectManagement } from '@/components/ProjectManagement';
 import { ReservedHoldsPanel } from '@/components/ReservedHoldsPanel';
 import { EducatorVisibilityPanel } from '@/components/EducatorVisibilityPanel';
 import { TeachersPanel } from '@/components/TeachersPanel';
+import { ItemsOutDialog } from '@/components/ItemsOutDialog';
 import { format } from 'date-fns';
 
 interface Educator {
@@ -226,6 +227,9 @@ const Admin = () => {
       </header>
 
       <main className="container py-6 space-y-6">
+        <div className="flex justify-end">
+          <ItemsOutDialog />
+        </div>
         <Tabs defaultValue="users" className="w-full">
           <TabsList className="grid w-full grid-cols-11 max-w-5xl">
             <TabsTrigger value="users" className="gap-2">

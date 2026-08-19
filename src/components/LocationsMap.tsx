@@ -6,6 +6,14 @@ import { InventoryItem } from '@/hooks/useInventoryDB';
 import { useEducatorLocations, EducatorLocation } from '@/hooks/useEducatorLocations';
 import type { PartnerSchool } from '@/hooks/usePartnerSchools';
 
+export interface OutGroup {
+  school: string;
+  lat: number;
+  lng: number;
+  count: number;
+  items?: string[];
+}
+
 interface LocationsMapProps {
   locations: Location[];
   items: InventoryItem[];
@@ -14,6 +22,8 @@ interface LocationsMapProps {
   onSchoolClick?: (school: PartnerSchool) => void;
   /** Hide individual educator names on off-site markers (for shared views). */
   hideEducatorNames?: boolean;
+  /** Checked-out items grouped by the school they're currently out at. */
+  outGroups?: OutGroup[];
 }
 
 // Fix default marker icons
@@ -43,7 +53,7 @@ const createColoredIcon = (color: string) => {
   });
 };
 
-export function LocationsMap({ locations, items, schools = [], onLocationClick, onSchoolClick, hideEducatorNames = false }: LocationsMapProps) {
+export function LocationsMap({ locations, items, schools = [], onLocationClick, onSchoolClick, hideEducatorNames = false, outGroups = [] }: LocationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const { educatorLocations } = useEducatorLocations(items);
@@ -214,11 +224,36 @@ export function LocationsMap({ locations, items, schools = [], onLocationClick, 
       bounds.push([school.latitude, school.longitude]);
     });
 
+    // Checked-out items, placed at the school they're currently out at (purple).
+    outGroups.forEach((g) => {
+      if (g.lat == null || g.lng == null) return;
+      const marker = L.marker([g.lat, g.lng], {
+        icon: createColoredIcon('hsl(271, 91%, 65%)'),
+      }).addTo(map);
+
+      const itemsList = (g.items ?? []).slice(0, 6).map(n => `• ${n}`).join('<br/>');
+      const moreItems = (g.items?.length ?? 0) > 6 ? `<br/><em>+${(g.items!.length) - 6} more…</em>` : '';
+
+      marker.bindPopup(`
+        <div style="min-width: 180px;">
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+            <span style="background: hsl(271, 91%, 65%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">OUT</span>
+          </div>
+          <strong>${g.school}</strong>
+          <div style="font-size: 12px; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
+            <strong>${g.count}</strong> item${g.count !== 1 ? 's' : ''} out:
+            <div style="margin-top: 4px; font-size: 11px;">${itemsList}${moreItems}</div>
+          </div>
+        </div>
+      `);
+      bounds.push([g.lat, g.lng]);
+    });
+
     // Fit map to bounds if we have markers
     if (bounds.length > 0) {
       map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
     }
-  }, [locations, items, onLocationClick, onSchoolClick, educatorLocations, schools, hideEducatorNames]);
+  }, [locations, items, onLocationClick, onSchoolClick, educatorLocations, schools, hideEducatorNames, outGroups]);
 
   return (
     <div 
