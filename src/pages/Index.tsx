@@ -493,7 +493,7 @@ const Index = () => {
             className="w-full flex items-center gap-2 p-3 text-left"
           >
             <MapPin className="h-5 w-5 text-accent" />
-            <span className="font-semibold">Where's our equipment</span>
+            <span className="font-semibold">Where equipment is checked out</span>
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <span className="h-2 w-2 rounded-full bg-available animate-pulse-soft" />
               Live
@@ -504,14 +504,15 @@ const Index = () => {
           </button>
           {showMap && (
             <div className="p-3 pt-0 space-y-2">
-              <LocationsMap locations={locations} items={items} outGroups={outGroups} hideEducatorNames />
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(142, 71%, 45%)' }} /> All available</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(221, 83%, 53%)' }} /> Mixed</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(0, 84%, 60%)' }} /> All checked out</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(38, 92%, 50%)' }} /> Maintenance</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(271, 91%, 65%)' }} /> Out at schools</span>
-              </div>
+              <LocationsMap locations={[]} items={[]} outGroups={outGroups} hideEducatorNames />
+              {outGroups.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nothing is checked out right now.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {outGroups.reduce((n, g) => n + g.count, 0)} item{outGroups.reduce((n, g) => n + g.count, 0) !== 1 ? 's' : ''} out
+                  {' '}across {outGroups.length} school{outGroups.length !== 1 ? 's' : ''} — tap a pin to see what's there.
+                </p>
+              )}
             </div>
           )}
         </div>
