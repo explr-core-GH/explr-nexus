@@ -185,10 +185,30 @@ export function ItemsOutDialog() {
 
       <style>{`
         @media print {
+          @page { margin: 12mm; }
+          /* Collapse the whole app so only the report prints (no blank pages). */
+          #root { display: none !important; }
+          html, body { background: #fff !important; }
           body * { visibility: hidden !important; }
           #items-out-report, #items-out-report * { visibility: visible !important; }
-          #items-out-report { position: absolute; left: 0; top: 0; width: 100%; padding: 12px; }
-          [data-sonner-toaster] { display: none !important; }
+          /* Neutralize the Radix dialog wrapper: without this its fixed
+             position + transform + clipping push the report off the page. */
+          [role="dialog"] {
+            position: static !important;
+            transform: none !important;
+            inset: auto !important;
+            max-height: none !important;
+            height: auto !important;
+            max-width: none !important;
+            width: 100% !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+          }
+          #items-out-report { position: static !important; }
+          #items-out-report .leaflet-container { height: 320px !important; }
+          [data-sonner-toaster], [data-radix-dialog-overlay] { display: none !important; }
         }
       `}</style>
     </Dialog>
