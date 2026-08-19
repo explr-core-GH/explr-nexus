@@ -43,6 +43,7 @@ import { InstallPWAButton } from '@/components/InstallPWAButton';
 import { useItemRequests } from '@/hooks/useItemRequests';
 import { MyRequestsSheet } from '@/components/MyRequestsSheet';
 import { PrintQRLabelsDialog } from '@/components/PrintQRLabelsDialog';
+import { ItemsOutDialog } from '@/components/ItemsOutDialog';
 import { LocationsMap } from '@/components/LocationsMap';
 import { supabase } from '@/integrations/supabase/client';
 import { ItemContentLine } from '@/types/inventory';
@@ -540,6 +541,7 @@ const Index = () => {
               <SelectItem value="quantity">Number (qty)</SelectItem>
             </SelectContent>
           </Select>
+          {canCheckInOut && <ItemsOutDialog />}
           {isAdmin && (
             <>
               <PrintQRLabelsDialog
