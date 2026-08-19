@@ -32,6 +32,58 @@ const greenIcon = L.divIcon({
 
 const fmtDate = (v: string | null) => (v ? new Date(v).toLocaleDateString() : '');
 
+// ---- Static map render (for the printable report) ---------------------
+const TILE = 256;
+const lngToWorldX = (lng: number, z: number) => ((lng + 180) / 360) * Math.pow(2, z) * TILE;
+const latToWorldY = (lat: number, z: number) => {
+  const s = Math.sin((lat * Math.PI) / 180);
+  return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * Math.pow(2, z) * TILE;
+};
+
+/** Composite CORS-enabled Carto tiles + markers onto a canvas -> PNG data URL. */
+async function buildStaticMap(points: { lat: number; lng: number }[], W: number, H: number): Promise<string | null> {
+  if (!points.length) return null;
+  const lats = points.map(p => p.lat), lngs = points.map(p => p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats), minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const pad = 70;
+  let z = 15;
+  for (; z >= 2; z--) {
+    const spanX = Math.abs(lngToWorldX(maxLng, z) - lngToWorldX(minLng, z));
+    const spanY = Math.abs(latToWorldY(maxLat, z) - latToWorldY(minLat, z));
+    if (spanX <= W - 2 * pad && spanY <= H - 2 * pad) break;
+  }
+  const cx = lngToWorldX((minLng + maxLng) / 2, z), cy = latToWorldY((minLat + maxLat) / 2, z);
+  const leftWorld = cx - W / 2, topWorld = cy - H / 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#e9eef2'; ctx.fillRect(0, 0, W, H);
+  const maxTile = Math.pow(2, z) - 1;
+  const loads: Promise<void>[] = [];
+  for (let tx = Math.floor(leftWorld / TILE); tx <= Math.floor((cx + W / 2) / TILE); tx++) {
+    for (let ty = Math.floor(topWorld / TILE); ty <= Math.floor((cy + H / 2) / TILE); ty++) {
+      if (tx < 0 || ty < 0 || tx > maxTile || ty > maxTile) continue;
+      const dx = tx * TILE - leftWorld, dy = ty * TILE - topWorld;
+      loads.push(new Promise<void>((res) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { ctx.drawImage(img, dx, dy); res(); };
+        img.onerror = () => res();
+        img.src = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${tx}/${ty}.png`;
+      }));
+    }
+  }
+  await Promise.all(loads);
+  for (const p of points) {
+    const x = lngToWorldX(p.lng, z) - leftWorld, y = latToWorldY(p.lat, z) - topWorld;
+    ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#1FE066'; ctx.strokeStyle = '#0F131A'; ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+  }
+  try { return canvas.toDataURL('image/png'); } catch { return null; }
+}
+
 export function ItemsOutDialog() {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<OutRow[]>([]);
@@ -110,6 +162,39 @@ export function ItemsOutDialog() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
+  const [building, setBuilding] = useState(false);
+  const downloadReport = async () => {
+    const esc = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const win = window.open('', '_blank', 'width=920,height=1000');
+    if (!win) return;
+    win.document.write('<!doctype html><title>Equipment currently out</title><p style="font-family:Arial;padding:24px;color:#666">Preparing report…</p>');
+    setBuilding(true);
+    let mapImg: string | null = null;
+    try { mapImg = await buildStaticMap(schools.map(s => ({ lat: s.lat, lng: s.lng })), 1040, 520); } catch { mapImg = null; }
+    setBuilding(false);
+    const body = rows.map(r => `<tr><td><b>${esc(r.item_name)}</b><br><span class="qr">${esc(r.qr_code)}</span></td><td>${esc(r.holder)}</td><td>${esc(r.school ?? 'No school on file')}</td><td>${esc(fmtDate(r.checked_out_at))}</td></tr>`).join('');
+    win.document.open();
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Equipment currently out</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;color:#0f131a;padding:24px;margin:0;}
+        h1{font-size:22px;margin:0 0 4px;} .sub{color:#666;margin:0 0 16px;font-size:13px;}
+        img{width:100%;border:1px solid #ddd;border-radius:8px;margin-bottom:16px;display:block;}
+        table{width:100%;border-collapse:collapse;font-size:12px;}
+        th{background:#1FE066;color:#0f131a;text-align:left;padding:6px 8px;}
+        td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top;}
+        .qr{color:#888;font-family:monospace;font-size:10px;}
+        tr{break-inside:avoid;}
+        @media print{@page{margin:12mm;}}
+      </style></head><body>
+      <h1>EXPLR Nexus — Equipment currently out</h1>
+      <p class="sub">${rows.length} item${rows.length !== 1 ? 's' : ''} out across ${schools.length} location${schools.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString()}</p>
+      ${mapImg ? `<img src="${mapImg}" alt="Map of where equipment is out">` : ''}
+      <table><thead><tr><th>Item</th><th>Checked out to</th><th>Location / School</th><th>Since</th></tr></thead><tbody>${body}</tbody></table>
+      <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
+      </body></html>`);
+    win.document.close();
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -118,7 +203,7 @@ export function ItemsOutDialog() {
           <span className="hidden sm:inline">Items Out</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto">
+      <DialogContent id="items-out-dialog-content" className="sm:max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPinned className="h-5 w-5 text-accent" />
@@ -135,8 +220,8 @@ export function ItemsOutDialog() {
             <Button variant="outline" size="sm" className="gap-1.5" onClick={exportExcel} disabled={rows.length === 0}>
               <Download className="h-4 w-4" /> Excel
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => window.print()} disabled={rows.length === 0}>
-              <Printer className="h-4 w-4" /> Download PDF
+            <Button size="sm" className="gap-1.5" onClick={downloadReport} disabled={rows.length === 0 || building}>
+              {building ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} Download PDF
             </Button>
           </div>
         </div>
@@ -183,34 +268,6 @@ export function ItemsOutDialog() {
         </div>
       </DialogContent>
 
-      <style>{`
-        @media print {
-          @page { margin: 12mm; }
-          /* Collapse the whole app so only the report prints (no blank pages). */
-          #root { display: none !important; }
-          html, body { background: #fff !important; }
-          body * { visibility: hidden !important; }
-          #items-out-report, #items-out-report * { visibility: visible !important; }
-          /* Neutralize the Radix dialog wrapper: without this its fixed
-             position + transform + clipping push the report off the page. */
-          [role="dialog"] {
-            position: static !important;
-            transform: none !important;
-            inset: auto !important;
-            max-height: none !important;
-            height: auto !important;
-            max-width: none !important;
-            width: 100% !important;
-            overflow: visible !important;
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-          }
-          #items-out-report { position: static !important; }
-          #items-out-report .leaflet-container { height: 320px !important; }
-          [data-sonner-toaster], [data-radix-dialog-overlay] { display: none !important; }
-        }
-      `}</style>
     </Dialog>
   );
 }
